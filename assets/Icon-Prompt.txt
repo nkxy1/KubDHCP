@@ -1,0 +1,3 @@
+Tool: built-in image_gen
+
+Use case: precise-object-edit. Create KubDHCP Windows application icon from the supplied Kubscan icon. Preserve the rounded navy square, cyan blue isometric cube with K on right face, overall composition and polished gradient style. Change the radar arcs at upper right into clear lime green outward distribution arrows, and change the left face network into three linked address assignment nodes with small address-card shapes, indicating DHCP server assigning IP addresses to clients. Keep recognizable cube and K layout. No text or numbers. Transparent outside rounded square. Crisp readable app icon.

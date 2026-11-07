@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/KubDHCP.Core/KubDHCP.Core.csproj" />
+    <Project Path="src/KubDHCP.App/KubDHCP.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/KubDHCP.Tests/KubDHCP.Tests.csproj" />
+  </Folder>
+</Solution>

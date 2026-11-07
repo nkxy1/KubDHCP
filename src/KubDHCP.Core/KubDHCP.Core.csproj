@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsTrimmable>true</IsTrimmable>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Data\options.json" />
+    <EmbeddedResource Include="Data\oui.tsv.gz" />
+  </ItemGroup>
+</Project>
