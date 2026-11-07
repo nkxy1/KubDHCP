@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using KubDHCP.Core;
 
+args = Localizer.Configure(args);
 var tests = new List<(string Name, Action Run)>();
 void Test(string name, Action run) => tests.Add((name, run));
 void Check(bool condition, string message = "Assertion failed") { if (!condition) throw new Exception(message); }
@@ -34,7 +35,7 @@ Test("Managed protocol options cannot be overridden", () => Throws<ArgumentExcep
 Test("RFC 3397 domain-list encoder", () => { var bytes = OptionCodec.Encode(new() { Code = 119, Format = "Domainliste", Value = "example.com" }); Check(bytes.SequenceEqual(new byte[] { 7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0 })); });
 Test("RFC 3442 route encoder", () => { var bytes = OptionCodec.Encode(new() { Code = 121, Format = "Routen", Value = "0.0.0.0/0=192.168.50.254;10.20.0.0/16=192.168.50.254" }); Check(bytes.SequenceEqual(new byte[] { 0, 192, 168, 50, 254, 16, 10, 20, 192, 168, 50, 254 })); Throws<ArgumentException>(() => OptionCodec.Encode(new() { Code = 121, Format = "Routen", Value = "10.20.1.0/16=192.168.50.254" })); });
 Test("Full embedded IANA catalog", () => { var options = OptionDefinition.Load(); Check(options.Count >= 160); Check(options.Any(o => o.Code == 125)); Check(options.First(o => o.Code == 53).Managed); });
-Test("IEEE longest-prefix database and local MAC handling", () => { var oui = new OuiLookup(); Check(oui.Count > 50000); Check(oui.Find("B8:27:EB:01:02:03").Contains("Raspberry", StringComparison.OrdinalIgnoreCase)); Check(oui.Find("02:11:22:33:44:55") == "Lokal administriert"); });
+Test("IEEE longest-prefix database and local MAC handling", () => { var oui = new OuiLookup(); Check(oui.Count > 50000); Check(oui.Find("B8:27:EB:01:02:03").Contains("Raspberry", StringComparison.OrdinalIgnoreCase)); Check(oui.Find("02:11:22:33:44:55") == Localizer.Text("Lokal administriert")); });
 Test("Offer does not create a confirmed lease", () => { var e = new DhcpEngine(config, Store()); Check(e.Handle(Packet(1), now)?.Type == DhcpMessageType.Offer); Check(e.Snapshot().Count == 0); });
 Test("DORA commits lease, updates renewal and survives restart", () => { var store = Store(); var e = new DhcpEngine(config, store); var offer = e.Handle(Packet(1), now)!; var ack = e.Handle(Request(offer), now); Check(ack?.Type == DhcpMessageType.Ack); Check(e.Snapshot().Count == 1); e.Handle(Packet(3, 1, offer.Address), now.AddSeconds(30)); Check(e.Snapshot().Count == 1 && e.Snapshot()[0].LastConfirmedUtc == now.AddSeconds(30)); var restart = new DhcpEngine(config, store); Check(restart.Handle(Packet(1, 2), now.AddSeconds(31))?.Address != offer.Address); });
 Test("Simultaneous clients receive unique reservations", () => { var e = new DhcpEngine(config, Store()); var ips = new ConcurrentBag<uint>(); Parallel.For(1, 41, client => ips.Add(e.Handle(Packet(1, client), now)!.Address)); Check(ips.Count == 40 && ips.Distinct().Count() == 40); });
@@ -102,7 +103,7 @@ Test("Monitor shows request identity, address, lease and requested options", () 
 {
     var packet = Packet(3, 1, Ipv4.Parse("192.168.50.100"), (50, OptionCodec.IpBytes("192.168.50.101")), (51, OptionCodec.UInt32Bytes(120)), (55, new byte[] { 1, 3, 6 }));
     var text = NetworkMonitorText.Request(packet);
-    Check(text.Contains("REQUEST") && text.Contains(packet.Mac) && text.Contains("192.168.50.100") && text.Contains("gewünschte IP=192.168.50.101") && text.Contains("120 s") && text.Contains("1,3,6"));
+    Check(text.Contains("REQUEST") && text.Contains(packet.Mac) && text.Contains("192.168.50.100") && text.Contains(Localizer.Text("gewünschte IP") + "=192.168.50.101") && text.Contains("120 s") && text.Contains("1,3,6"));
 });
 Test("Monitor response reflects options actually sent on the wire", () =>
 {
@@ -123,7 +124,7 @@ Test("Monitor distinguishes foreign DHCP servers and no-reply messages", () =>
 {
     var foreign = Packet(3, 1, 0, (54, OptionCodec.IpBytes("192.168.50.2")));
     Check(NetworkMonitorText.NoReply(foreign, config.ServerAddress).Contains("192.168.50.2"));
-    Check(NetworkMonitorText.NoReply(Packet(7), config.ServerAddress).Contains("keine Antwort vorgesehen"));
+    Check(NetworkMonitorText.NoReply(Packet(7), config.ServerAddress).Contains(Localizer.IsGerman ? "keine Antwort vorgesehen" : "no reply is expected"));
 });
 
 Test("Hostname survives DISCOVER-only advertisement, renewal and restart", () =>
@@ -291,6 +292,82 @@ Test("Hostname history keeps the first row when confirmation timestamps tie", ()
     var offer = engine.Handle(Packet(1), now)!;
     engine.Handle(Request(offer), now);
     Check(engine.Snapshot().Single(l => l.State == "Active").Hostname == "first");
+});
+
+Test("UI language follows German locales and falls back to English for other locales", () =>
+{
+    var previous = System.Globalization.CultureInfo.CurrentUICulture;
+    try
+    {
+        foreach (var name in new[] { "de-DE", "de-CH", "en-US", "fr-FR" })
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(name);
+            Check(Localizer.IsGerman == name.StartsWith("de", StringComparison.Ordinal));
+            Check(Localizer.Text("Subnetzmaske") == (Localizer.IsGerman ? "Subnetzmaske" : "Subnet mask"));
+            Check(Localizer.Text("DHCP-Konfiguration") == (Localizer.IsGerman ? "DHCP-Konfiguration" : "DHCP configuration"));
+            Check(OptionCodec.Encode(new() { Code = 119, Format = "Domainliste", Value = "lab.example" }).Length == 13);
+        }
+    }
+    finally { System.Globalization.CultureInfo.CurrentUICulture = previous; }
+});
+Test("Language override consumes only its own argument and preserves test switches", () =>
+{
+    var previous = System.Globalization.CultureInfo.CurrentUICulture;
+    var threadDefault = System.Globalization.CultureInfo.DefaultThreadCurrentUICulture;
+    try
+    {
+        Check(Localizer.Configure(["--tui", "--language=en"]).SequenceEqual(new[] { "--tui" }));
+        Check(!Localizer.IsGerman && Localizer.Text("Routen") == "Routes");
+        Check(Localizer.Configure(["--startup-test", "report", "--language=de"]).SequenceEqual(new[] { "--startup-test", "report" }));
+        Check(Localizer.IsGerman);
+        Throws<ArgumentException>(() => Localizer.Configure(["--language=xx"]));
+    }
+    finally
+    {
+        System.Globalization.CultureInfo.CurrentUICulture = previous;
+        System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = threadDefault;
+    }
+});
+Test("User data defaults to the Windows user profile instead of the executable folder", () =>
+{
+    Check(UserData.DirectoryPath == Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "KubDHCP"));
+    var root = Path.Combine(Store().DirectoryPath, "profile");
+    var exe = Path.Combine(Store().DirectoryPath, "application");
+    Check(UserData.Open(root, exe).DirectoryPath == Path.Combine(root, "KubDHCP"));
+    Check(!Directory.Exists(exe));
+});
+Test("First user-profile start copies legacy data and backups without changing their bytes", () =>
+{
+    var root = Store().DirectoryPath;
+    var executable = Path.Combine(root, "application");
+    var legacy = new DataStore(Path.Combine(executable, "KubDHCP.data"));
+    legacy.SaveConfiguration(config); legacy.SaveRange("Lab", config);
+    legacy.SaveLeases([]); legacy.SaveLeases([]);
+    var files = Directory.GetFiles(legacy.DirectoryPath).ToDictionary(p => Path.GetFileName(p)!, File.ReadAllBytes);
+    var user = UserData.Open(Path.Combine(root, "profile"), executable);
+    Check(user.LoadRanges().Single().Name == "Lab" && user.LoadConfiguration()!.StartAddress == config.StartAddress);
+    foreach (var file in files)
+    {
+        Check(File.ReadAllBytes(Path.Combine(user.DirectoryPath, file.Key!)).SequenceEqual(file.Value));
+        Check(File.ReadAllBytes(Path.Combine(legacy.DirectoryPath, file.Key!)).SequenceEqual(file.Value));
+    }
+});
+Test("Existing user data takes priority over legacy executable-side data", () =>
+{
+    var root = Store().DirectoryPath; var executable = Path.Combine(root, "application");
+    var profile = Path.Combine(root, "profile");
+    var user = UserData.Open(profile, executable); user.SaveRange("User", config);
+    var legacy = new DataStore(Path.Combine(executable, "KubDHCP.data")); legacy.SaveRange("Legacy", config);
+    Check(UserData.Open(profile, executable).LoadRanges().Single().Name == "User");
+});
+Test("Legacy corrupt leases remain corrupt after migration and still block server startup", () =>
+{
+    var root = Store().DirectoryPath; var executable = Path.Combine(root, "application");
+    var legacy = new DataStore(Path.Combine(executable, "KubDHCP.data"));
+    File.WriteAllText(Path.Combine(legacy.DirectoryPath, "leases.json"), "{broken");
+    var user = UserData.Open(Path.Combine(root, "profile"), executable);
+    Throws<InvalidDataException>(() => new DhcpEngine(config, user));
+    Check(File.ReadAllText(Path.Combine(legacy.DirectoryPath, "leases.json")) == "{broken");
 });
 
 var failures = 0;

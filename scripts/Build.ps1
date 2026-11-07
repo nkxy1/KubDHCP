@@ -5,8 +5,10 @@ Set-Location -LiteralPath $projectRoot
 $localDotnet = Join-Path $projectRoot '.tools\dotnet\dotnet.exe'
 $dotnetCommand = if (Test-Path -LiteralPath $localDotnet) { $localDotnet } else { (Get-Command dotnet -ErrorAction Stop).Source }
 if (-not $SkipTests) {
-    & $dotnetCommand run --project 'tests\KubDHCP.Tests\KubDHCP.Tests.csproj' -c Release --nologo
-    if ($LASTEXITCODE -ne 0) { throw 'Die Kerntests sind fehlgeschlagen.' }
+    foreach ($language in @('de', 'en')) {
+        & $dotnetCommand run --project 'tests\KubDHCP.Tests\KubDHCP.Tests.csproj' -c Release --nologo -- "--language=$language"
+        if ($LASTEXITCODE -ne 0) { throw "Die Kerntests ($language) sind fehlgeschlagen." }
+    }
 }
 & $dotnetCommand publish 'src\KubDHCP.App\KubDHCP.App.csproj' -c Release -o 'artifacts\portable' --nologo
 if ($LASTEXITCODE -ne 0) { throw 'Veröffentlichung fehlgeschlagen.' }
@@ -37,10 +39,12 @@ $smokeDirectory = Join-Path $projectRoot 'artifacts\startup-smoke'
 New-Item -ItemType Directory -Path $smokeDirectory -Force | Out-Null
 $smokeExe = Join-Path $smokeDirectory $exe.Name
 Copy-Item -LiteralPath $exe.FullName -Destination $smokeExe -Force
+foreach ($language in @('de', 'en')) {
 $startupReport = Join-Path $smokeDirectory ('startup-' + [Guid]::NewGuid().ToString('N') + '.txt')
 $startupInfo = [Diagnostics.ProcessStartInfo]::new($smokeExe)
 $startupInfo.UseShellExecute = $false
 $startupInfo.CreateNoWindow = $true
+$startupInfo.ArgumentList.Add("--language=$language")
 $startupInfo.ArgumentList.Add('--startup-test')
 $startupInfo.ArgumentList.Add($startupReport)
 $startupProcess = [Diagnostics.Process]::Start($startupInfo)
@@ -53,6 +57,7 @@ $tuiReport = Join-Path $smokeDirectory ('tui-' + [Guid]::NewGuid().ToString('N')
 $tuiInfo = [Diagnostics.ProcessStartInfo]::new($smokeExe)
 $tuiInfo.UseShellExecute = $false
 $tuiInfo.CreateNoWindow = $true
+$tuiInfo.ArgumentList.Add("--language=$language")
 $tuiInfo.ArgumentList.Add('--tui-test')
 $tuiInfo.ArgumentList.Add($tuiReport)
 $tuiProcess = [Diagnostics.Process]::Start($tuiInfo)
@@ -61,6 +66,7 @@ if ($tuiProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $tuiReport)) { t
 $tuiResult = Get-Content -LiteralPath $tuiReport -Raw
 if (-not $tuiResult.StartsWith('PASS:')) { throw $tuiResult }
 Write-Output $tuiResult
-& (Join-Path $PSScriptRoot 'Test-TuiSession.ps1') -ExePath $smokeExe
+& (Join-Path $PSScriptRoot 'Test-TuiSession.ps1') -ExePath $smokeExe -Language $language
+}
 Write-Output "Portable EXE: $($exe.FullName) ($([Math]::Round($exe.Length / 1MB, 2)) MiB)"
 Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256 | Format-List

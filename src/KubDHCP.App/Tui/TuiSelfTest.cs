@@ -40,9 +40,9 @@ internal static class TuiSelfTest
                 new() { Scope = configuration.Scope, ClientKey = "HW:1:001B1B010203", Address = "192.168.50.101", Mac = "00:1B:1B:01:02:03", LastConfirmedUtc = now, ExpiresUtc = now.AddHours(1) }]);
             using var app = new TuiApplication(null, store, [adapter]);
             var canvas = app.Render(176, 62); var text = canvas.PlainText();
-            Check(text.Contains("DHCP-Konfiguration") && text.Contains("Leases") && text.Contains("Client-ID") && text.Contains("Hostname"), "Layout missing sections");
+            Check(text.Contains(Localizer.Text("DHCP-Konfiguration")) && text.Contains("Leases") && text.Contains(Localizer.Text("Client-ID")) && text.Contains("Hostname"), "Layout missing sections");
             Check(text.Contains("printer-lab") && text.Contains("01020304050607"), "Lease information missing");
-            Check(!text.Contains("Netzwerk-Monitor"), "Monitor visible at startup");
+            Check(!text.Contains(Localizer.Text("Netzwerk-Monitor")), "Monitor visible at startup");
             Snapshot(reportPath + ".main", canvas);
             Click(app, "adapter-settings"); app.Render(176, 62);
             Check(app.Surface.Controls.Any(c => c.Id == "adapter-address") && app.Surface.Controls.Any(c => c.Id == "adapter-dns"), "Adapter settings opened outside terminal");
@@ -53,7 +53,7 @@ internal static class TuiSelfTest
             foreach (var c in "192.168.50.110") app.Handle(new(Character: c));
             Check(app.Field("start").Text == "192.168.50.110", "Text editing failed");
             app.Handle(new(Key: 9)); Check(store.LoadConfiguration()!.StartAddress == "192.168.50.110", "Draft was not saved");
-            app.Render(176, 62); Click(app, "monitor"); canvas = app.Render(176, 62); Check(app.MonitorVisible && canvas.PlainText().Contains("Netzwerk-Monitor"), "Mouse monitor toggle failed");
+            app.Render(176, 62); Click(app, "monitor"); canvas = app.Render(176, 62); Check(app.MonitorVisible && canvas.PlainText().Contains(Localizer.Text("Netzwerk-Monitor")), "Mouse monitor toggle failed");
             Check(TransportSelfTest.Run(reportPath + ".network.txt", app.QueueNetwork) == 0, "Loopback monitor transport failed");
             app.Poll(); canvas = app.Render(176, 62); Snapshot(reportPath + ".monitor", canvas);
             Check(canvas.PlainText().Contains("ACK"), "Real loopback response missing from TUI monitor");
@@ -71,15 +71,15 @@ internal static class TuiSelfTest
             app.QueueNetwork("SELFTEST · after-scroll"); app.Poll();
             app.Handle(new(X: output.X + 1, Y: output.Y + 1, Wheel: -1000, Mouse: true)); app.Poll();
             Check(app.Following && app.Render(176, 62).PlainText().Contains("after-scroll"), "Scrolling to end did not resume");
-            Click(app, "monitor"); Check(!app.Render(176, 62).PlainText().Contains("Netzwerk-Monitor"), "Monitor did not collapse");
-            app.Render(176, 62); Click(app, "ranges"); Check(app.Render(176, 62).PlainText().Contains("Bereich laden"), "Range picker did not open");
+            Click(app, "monitor"); Check(!app.Render(176, 62).PlainText().Contains(Localizer.Text("Netzwerk-Monitor")), "Monitor did not collapse");
+            app.Render(176, 62); Click(app, "ranges"); Check(app.Render(176, 62).PlainText().Contains(Localizer.Text("Bereich laden")), "Range picker did not open");
             app.Surface.FocusId = "popup-list"; app.Handle(new(Key: 13)); app.Render(176, 62);
             Check(app.Field("start").Text == configuration.StartAddress, "Named range did not restore configuration");
             Click(app, "save-range"); app.Render(176, 62); Type(app, "popup-name", "Zweitbereich");
             app.Surface.FocusId = "popup-save"; app.Handle(new(Key: 13)); app.Render(176, 62);
             Check(store.LoadRanges().Count == 2, "Named range save failed");
             Click(app, "remove-range"); app.Render(176, 62); Check(store.LoadRanges().Single().Name == "Labor" && app.Leases.Count == 2, "Range deletion damaged leases");
-            Click(app, "add-option"); Check(app.Render(176, 62).PlainText().Contains("IANA-Optionskatalog"), "Option editor missing");
+            Click(app, "add-option"); Check(app.Render(176, 62).PlainText().Contains(Localizer.Text("IANA-Optionskatalog")), "Option editor missing");
             Type(app, "popup-code", "66"); Type(app, "popup-value", "boot.example"); app.Render(176, 62); Click(app, "popup-always"); app.Render(176, 62);
             app.Surface.FocusId = "popup-save"; app.Handle(new(Key: 13)); app.Render(176, 62);
             Check(store.LoadConfiguration()!.Options.Single(o => o.Code == 66).AlwaysSend, "Option editor did not persist option");
@@ -98,7 +98,7 @@ internal static class TuiSelfTest
             {
                 var size = terminal.Size; var screen = app.Render(size.Width, size.Height); terminal.Present(screen);
                 File.WriteAllText(reportPath + ".native.txt", $"{size}\n" + terminal.ReadBack());
-                Check(terminal.ReadBack().Contains("DHCP-Konfiguration") && terminal.ReadBack().Contains("Primärer DNS-Server"), "Native Unicode console output failed");
+                Check(terminal.ReadBack().Contains(Localizer.Text("DHCP-Konfiguration")) && terminal.ReadBack().Contains(Localizer.Text("Primärer DNS-Server")), "Native Unicode console output failed");
                 terminal.Inject(new ConsoleTerminal.Record { Type = 1, Down = 1, Repeat = 1, Key = 9, Character = '\t' });
                 Check(terminal.Read(1000).Any(i => i.Key == 9), "Native keyboard input failed");
                 terminal.Inject(new ConsoleTerminal.Record { Type = 2, Position = new ConsoleTerminal.Coord(4, 4), Buttons = 1 });

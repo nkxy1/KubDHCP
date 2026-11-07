@@ -1,3 +1,4 @@
+using KubDHCP.Core;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
@@ -57,7 +58,7 @@ internal sealed class ConsoleTerminal : IDisposable
         else if (!GetConsoleMode(GetStdHandle(-10), out _)) AttachConsole(uint.MaxValue);
         input = CreateFile("CONIN$", 0xC0000000, 3, 0, 3, 0, 0);
         output = CreateFile("CONOUT$", 0xC0000000, 3, 0, 3, 0, 0);
-        if (input == -1 || output == -1) throw new InvalidOperationException("--tui benötigt eine interaktive PowerShell-/Terminalsitzung. Bei SSH bitte ein Terminal anfordern (ssh -t). Es wird kein Fenster geöffnet.");
+        if (input == -1 || output == -1) throw new InvalidOperationException(Localizer.Text("--tui benötigt eine interaktive PowerShell-/Terminalsitzung. Bei SSH bitte ein Terminal anfordern (ssh -t). Es wird kein Fenster geöffnet."));
         Check(GetConsoleMode(input, out oldMode)); Check(GetConsoleMode(output, out oldOutputMode));
         Check(SetConsoleMode(input, 0x0080 | 0x0010 | 0x0008));
         Check(SetConsoleMode(output, oldOutputMode | 0x0004 | 0x0008));

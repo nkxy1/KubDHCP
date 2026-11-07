@@ -30,7 +30,7 @@ public sealed class DhcpEngine
             if (lease.Scope != scope || lease.State != "Active" || lease.ExpiresUtc <= now) continue;
             var address = Ipv4.Parse(lease.Address);
             if (address < start || address > end)
-                throw new InvalidOperationException("Es bestehen noch gültige Leases außerhalb des neuen Pools. Pool wieder erweitern oder deren Ablauf abwarten.");
+                throw new InvalidOperationException(Localizer.Text("Es bestehen noch gültige Leases außerhalb des neuen Pools. Pool wieder erweitern oder deren Ablauf abwarten."));
         }
     }
 

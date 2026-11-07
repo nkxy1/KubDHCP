@@ -1,6 +1,6 @@
-param([Parameter(Mandatory)][string]$ExePath)
+param([Parameter(Mandatory)][string]$ExePath, [ValidateSet('de', 'en')][string]$Language = 'de')
 $ErrorActionPreference = 'Stop'
 # Exercise the delivered EXE inside an actual PowerShell/ConPTY session. No desktop
 # terminal automation, SSH service, LAN traffic or adapter changes are needed.
 Add-Type -Path (Join-Path $PSScriptRoot 'TuiSessionTest.cs')
-[KubTuiSessionTest]::Run((Get-Command pwsh).Source, [IO.Path]::GetFullPath($ExePath))
+[KubTuiSessionTest]::Run((Get-Command pwsh).Source, [IO.Path]::GetFullPath($ExePath), $Language)

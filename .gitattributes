@@ -1,0 +1,2 @@
+# Trailing spaces in translated message fragments separate dynamic values.
+src/KubDHCP.Core/Data/English.tsv whitespace=-blank-at-eol

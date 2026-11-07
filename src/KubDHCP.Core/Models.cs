@@ -92,23 +92,23 @@ public sealed record ServerConfiguration
     public void Validate(AdapterInfo adapter)
     {
         var server = Ipv4.Parse(ServerAddress); var start = Ipv4.Parse(StartAddress); var end = Ipv4.Parse(EndAddress); var mask = Ipv4.Parse(Mask);
-        if (!Ipv4.IsMask(mask) || mask is 0 or 0xffffffff or 0xfffffffe) throw new ArgumentException("Die Subnetzmaske muss zusammenhängend sein und einen Pool von Hostadressen zulassen (/1 bis /30).");
-        if (AdapterId != adapter.Id || ServerAddress != adapter.Address || Mask != adapter.Mask) throw new ArgumentException("Serveradresse und Subnetzmaske müssen zur ausgewählten LAN-Karte passen.");
-        if (!Ipv4.IsHost(server) || server >> 16 == 0xa9fe) throw new ArgumentException("Die LAN-Karte benötigt eine reguläre IPv4-Adresse. Bitte die Windows-IP-Konfiguration prüfen.");
+        if (!Ipv4.IsMask(mask) || mask is 0 or 0xffffffff or 0xfffffffe) throw new ArgumentException(Localizer.Text("Die Subnetzmaske muss zusammenhängend sein und einen Pool von Hostadressen zulassen (/1 bis /30)."));
+        if (AdapterId != adapter.Id || ServerAddress != adapter.Address || Mask != adapter.Mask) throw new ArgumentException(Localizer.Text("Serveradresse und Subnetzmaske müssen zur ausgewählten LAN-Karte passen."));
+        if (!Ipv4.IsHost(server) || server >> 16 == 0xa9fe) throw new ArgumentException(Localizer.Text("Die LAN-Karte benötigt eine reguläre IPv4-Adresse. Bitte die Windows-IP-Konfiguration prüfen."));
         var net = server & mask; var broadcast = net | ~mask;
-        if (start > end || (start & mask) != net || (end & mask) != net || start == net || end == broadcast) throw new ArgumentException("Start- und Stop-IP müssen einen gültigen Hostbereich im Subnetz der LAN-Karte bilden.");
-        if (LeaseSeconds is 0 or uint.MaxValue) throw new ArgumentException("Bitte eine endliche Lease-Dauer zwischen 1 und 4.294.967.294 Sekunden eingeben.");
+        if (start > end || (start & mask) != net || (end & mask) != net || start == net || end == broadcast) throw new ArgumentException(Localizer.Text("Start- und Stop-IP müssen einen gültigen Hostbereich im Subnetz der LAN-Karte bilden."));
+        if (LeaseSeconds is 0 or uint.MaxValue) throw new ArgumentException(Localizer.Text("Bitte eine endliche Lease-Dauer zwischen 1 und 4.294.967.294 Sekunden eingeben."));
         var excluded = new List<uint> { server };
         excluded.AddRange(adapter.LocalAddresses.Select(Ipv4.Parse));
         foreach (var text in new[] { Gateway, PrimaryDns, SecondaryDns }.Where(s => !string.IsNullOrWhiteSpace(s)))
         {
-            var ip = Ipv4.Parse(text); if (!Ipv4.IsHost(ip) || ip == broadcast || ip == net) throw new ArgumentException("Gateway und DNS müssen gültige Unicast-Hostadressen sein.");
+            var ip = Ipv4.Parse(text); if (!Ipv4.IsHost(ip) || ip == broadcast || ip == net) throw new ArgumentException(Localizer.Text("Gateway und DNS müssen gültige Unicast-Hostadressen sein."));
             excluded.Add(ip);
         }
-        if (!string.IsNullOrWhiteSpace(Gateway) && (Ipv4.Parse(Gateway) & mask) != net) throw new ArgumentException("Der Gateway muss im lokalen Subnetz liegen.");
-        if (string.IsNullOrWhiteSpace(PrimaryDns) && !string.IsNullOrWhiteSpace(SecondaryDns)) throw new ArgumentException("Bitte zuerst den primären DNS-Server angeben.");
-        if (excluded.Any(ip => ip >= start && ip <= end)) throw new ArgumentException("Der Adresspool darf keine lokale Adapteradresse, Gateway- oder DNS-Adresse enthalten.");
-        if (Options.Where(o => o.Enabled).GroupBy(o => o.Code).Any(g => g.Count() > 1)) throw new ArgumentException("Ein zusätzlicher Optionscode darf nur einmal vorkommen.");
+        if (!string.IsNullOrWhiteSpace(Gateway) && (Ipv4.Parse(Gateway) & mask) != net) throw new ArgumentException(Localizer.Text("Der Gateway muss im lokalen Subnetz liegen."));
+        if (string.IsNullOrWhiteSpace(PrimaryDns) && !string.IsNullOrWhiteSpace(SecondaryDns)) throw new ArgumentException(Localizer.Text("Bitte zuerst den primären DNS-Server angeben."));
+        if (excluded.Any(ip => ip >= start && ip <= end)) throw new ArgumentException(Localizer.Text("Der Adresspool darf keine lokale Adapteradresse, Gateway- oder DNS-Adresse enthalten."));
+        if (Options.Where(o => o.Enabled).GroupBy(o => o.Code).Any(g => g.Count() > 1)) throw new ArgumentException(Localizer.Text("Ein zusätzlicher Optionscode darf nur einmal vorkommen."));
         foreach (var option in Options.Where(o => o.Enabled)) OptionCodec.Encode(option);
     }
 }
@@ -127,7 +127,7 @@ public static class Ipv4
         }
         return true;
     }
-    public static uint Parse(string text) => TryParse(text, out var ip) ? ip : throw new ArgumentException($"Ungültige IPv4-Adresse: {text}");
+    public static uint Parse(string text) => TryParse(text, out var ip) ? ip : throw new ArgumentException((Localizer.IsGerman ? $"Ungültige IPv4-Adresse: {text}" : $"Invalid IPv4 address: {text}"));
     public static string Format(uint ip) => $"{ip >> 24}.{(ip >> 16) & 255}.{(ip >> 8) & 255}.{ip & 255}";
     public static IPAddress ToAddress(uint ip) => new(new[] { (byte)(ip >> 24), (byte)(ip >> 16), (byte)(ip >> 8), (byte)ip });
     public static bool IsMask(uint mask) { var inv = ~mask; return (inv & (inv + 1)) == 0; }

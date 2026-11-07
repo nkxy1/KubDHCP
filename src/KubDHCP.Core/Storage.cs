@@ -25,16 +25,16 @@ public sealed class DataStore
         var path = Path.Combine(DirectoryPath, "ranges.json");
         if (!File.Exists(path)) return [];
         var ranges = JsonSerializer.Deserialize(File.ReadAllText(path), DataJsonContext.Default.ListSavedRange)
-            ?? throw new InvalidDataException("Die gespeicherten Bereiche sind leer oder beschädigt.");
+            ?? throw new InvalidDataException(Localizer.Text("Die gespeicherten Bereiche sind leer oder beschädigt."));
         if (ranges.Any(r => r is null || string.IsNullOrWhiteSpace(r.Name) || r.Configuration is null)
             || ranges.GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
-            throw new InvalidDataException("Die gespeicherten Bereiche enthalten ungültige oder doppelte Namen.");
+            throw new InvalidDataException(Localizer.Text("Die gespeicherten Bereiche enthalten ungültige oder doppelte Namen."));
         return ranges;
     }
     public void SaveRange(string name, ServerConfiguration configuration)
     {
         name = name.Trim();
-        if (name.Length == 0) throw new ArgumentException("Bitte einen Namen für den Bereich eingeben.");
+        if (name.Length == 0) throw new ArgumentException(Localizer.Text("Bitte einen Namen für den Bereich eingeben."));
         var ranges = LoadRanges();
         ranges.RemoveAll(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
         ranges.Add(new SavedRange { Name = name, Configuration = configuration });
@@ -53,14 +53,14 @@ public sealed class DataStore
         if (!File.Exists(path)) return [];
         try
         {
-            var leases = JsonSerializer.Deserialize(File.ReadAllText(path), DataJsonContext.Default.ListLeaseRecord) ?? throw new InvalidDataException("Leasedatei ist leer.");
-            if (leases.Any(l => l is null || !Ipv4.TryParse(l.Address, out _) || string.IsNullOrWhiteSpace(l.ClientKey) || string.IsNullOrWhiteSpace(l.Scope) || l.State is not ("Active" or "Released" or "Declined") || l.State == "Active" && (l.LastConfirmedUtc == default || l.ExpiresUtc < l.LastConfirmedUtc))) throw new InvalidDataException("Leasedatei enthält ungültige Einträge.");
+            var leases = JsonSerializer.Deserialize(File.ReadAllText(path), DataJsonContext.Default.ListLeaseRecord) ?? throw new InvalidDataException(Localizer.Text("Leasedatei ist leer."));
+            if (leases.Any(l => l is null || !Ipv4.TryParse(l.Address, out _) || string.IsNullOrWhiteSpace(l.ClientKey) || string.IsNullOrWhiteSpace(l.Scope) || l.State is not ("Active" or "Released" or "Declined") || l.State == "Active" && (l.LastConfirmedUtc == default || l.ExpiresUtc < l.LastConfirmedUtc))) throw new InvalidDataException(Localizer.Text("Leasedatei enthält ungültige Einträge."));
             var now = DateTimeOffset.UtcNow;
-            if (leases.Where(l => l.State is "Active" or "Declined" && l.ExpiresUtc > now).GroupBy(l => (l.Scope, l.Address)).Any(g => g.Count() > 1)) throw new InvalidDataException("Leasedatei enthält doppelte aktive IP-Adressen.");
+            if (leases.Where(l => l.State is "Active" or "Declined" && l.ExpiresUtc > now).GroupBy(l => (l.Scope, l.Address)).Any(g => g.Count() > 1)) throw new InvalidDataException(Localizer.Text("Leasedatei enthält doppelte aktive IP-Adressen."));
             // Source-generated deserialization may supply null for newly added init properties in older files.
             return leases.Select(l => l.Hostname is null ? l with { Hostname = "" } : l).ToList();
         }
-        catch (Exception ex) when (ex is JsonException or InvalidDataException) { throw new InvalidDataException("Lease-Zustand ist beschädigt. Start gesperrt; leases.json und Sicherung im Datenordner prüfen.", ex); }
+        catch (Exception ex) when (ex is JsonException or InvalidDataException) { throw new InvalidDataException(Localizer.Text("Lease-Zustand ist beschädigt. Start gesperrt; leases.json und Sicherung im Datenordner prüfen."), ex); }
     }
     public void SaveLeases(List<LeaseRecord> leases) => AtomicWrite("leases.json", JsonSerializer.Serialize(leases, DataJsonContext.Default.ListLeaseRecord));
     public bool RemoveLease(LeaseRecord lease)
@@ -97,9 +97,9 @@ public sealed class OuiLookup
     public string Find(string mac)
     {
         var hex = mac.Replace(":", "").Replace("-", "");
-        if (hex.Length != 12 || !byte.TryParse(hex[..2], System.Globalization.NumberStyles.HexNumber, null, out var first)) return "Unbekannt";
-        if ((first & 2) != 0) return "Lokal administriert";
+        if (hex.Length != 12 || !byte.TryParse(hex[..2], System.Globalization.NumberStyles.HexNumber, null, out var first)) return Localizer.Text("Unbekannt");
+        if ((first & 2) != 0) return Localizer.Text("Lokal administriert");
         foreach (var length in new[] { 9, 7, 6 }) if (vendors.TryGetValue(hex[..length], out var name)) return name;
-        return "Unbekannt";
+        return Localizer.Text("Unbekannt");
     }
 }

@@ -1,0 +1,293 @@
+Abbrechen	Cancel
+Abgelaufen	Expired
+Adresskonflikt	Address conflict
+Bedienung	Controls
+Bereit	Ready
+Gestoppt	Stopped
+Läuft	Running
+Hinzufügen	Add
+Bearbeiten	Edit
+Übernehmen	Apply
+Speichern	Save
+Fertig	Done
+Schließen	Close
+Freigegeben	Released
+Unbekannt	Unknown
+Lokal administriert	Locally administered
+Sekunden	Seconds
+Minuten	Minutes
+Stunden	Hours
+Tage	Days
+Start-IP	Start IP
+Stop-IP	End IP
+Subnetzmaske	Subnet mask
+Primärer DNS-Server	Primary DNS server
+Sekundärer DNS-Server	Secondary DNS server
+Zeitstempel	Timestamp
+MAC-Adresse	MAC address
+Client-ID	Client ID
+Gerätehersteller	Device vendor
+Rest-Leasezeit	Lease remaining
+Lease-Dauer	Lease duration
+Lease-Einheit	Lease unit
+Einheit der Lease-Dauer	Lease duration unit
+LAN-Karte auswählen	Select network adapter
+Gespeicherten Bereich laden	Load saved range
+Gespeicherte Bereiche	Saved ranges
+Bereich speichern	Save range
+Bereich laden	Load range
+Gespeicherten Bereich entfernen	Remove saved range
+Ausgewählten Bereich entfernen	Remove selected range
+Netzwerkschnittstelle	Network interface
+LAN-Karten aktualisieren	Refresh network adapters
+DHCP-Konfiguration	DHCP configuration
+0 aktive Leases	0 active leases
+1 aktiver Lease	1 active lease
+ aktive Leases	 active leases
+Noch keine bestätigten Adressvergaben.	No confirmed leases yet.
+Netzwerk-Monitor	Network monitor
+Netzwerk-Monitor einblenden	Show network monitor
+Netzwerk-Monitor ausblenden	Hide network monitor
+Monitorbreite anpassen	Adjust monitor width
+Ziehen, um die Monitorbreite anzupassen	Drag to adjust monitor width
+Ziehen, um die Spaltenbreite anzupassen	Drag to adjust column width
+ – Spaltenbreite anpassen	 – adjust column width
+DHCP & ARP · Hochscrollen pausiert	DHCP & ARP · scroll up to pause
+DHCP & ARP · Hochscrollen pausiert die Live-Ansicht	DHCP & ARP · scroll up to pause live view
+Live-Protokoll der DHCP- und ARP-Kommunikation	Live DHCP and ARP activity log
+Live-Ausgabe fortsetzen	Resume live output
+Live-Ausgabe pausieren	Pause live output
+Klicken zum Pausieren	Click to pause
+Klicken zum Fortsetzen	Click to resume
+Monitor bereit · DHCP/ARP-Kommunikation dieses Servers. Server gestoppt.	Monitor ready · this server's DHCP/ARP activity. Server stopped.
+Monitor bereit · protokolliert DHCP-/ARP-Kommunikation dieses Servers. Der Server ist gestoppt.	Monitor ready · records this server's DHCP/ARP activity. The server is stopped.
+Alle gespeicherten Leases löschen. Dafür den Server stoppen.	Delete all saved leases. Stop the server first.
+Lease Reset	Reset leases
+Server starten	Start server
+Server stoppen	Stop server
+Bitte warten…	Please wait…
+Name des Bereichs	Range name
+Vorhandene Namen werden aktualisiert.	Existing names will be updated.
+Ein vorhandener Bereich mit demselben Namen wird aktualisiert.	An existing range with the same name will be updated.
+Option hinzufügen	Add option
++ Option hinzufügen	+ Add option
+Option bearbeiten	Edit option
+Option entfernen	Remove option
+Option aktiv	Option enabled
+Option und Kodierung	Option and encoding
+Zusätzliche DHCP-Optionen	Additional DHCP options
+Weitere DHCP-Optionen	Additional DHCP options
+IANA-Option auswählen	Select IANA option
+IANA-Optionskatalog	IANA option catalog
+Optionscode	Option code
+Datenformat	Data format
+Optionswert	Option value
+Wert	Value
+Auch ohne Client-Anfrage senden	Send even if not requested by client
+Eigener Optionscode	Custom option code
+Eigener Optionscode / Rohdaten	Custom option code / raw data
+ · automatisch / clientseitig	 · automatic / client-side
+ · deaktiviert	 · disabled
+ · eine Route je Zeile	 · one route per line
+Eigener Optionscode. Format und Kodierung anhand der Gerätespezifikation prüfen.	Custom option code. Check the device specification for format and encoding.
+Eigener Optionscode. Kodierung und Bedeutung anhand der Gerätespezifikation prüfen.	Custom option code. Check the device specification for encoding and meaning.
+Herstellerspezifikation	Vendor specification
+Der Server läuft. Die Optionen sind bis zum Stoppen schreibgeschützt.	The server is running. Options are read-only until it is stopped.
+Zusätzliche Werte für DHCP-Antworten. Standardmäßig auf Anfrage des Clients.	Additional values for DHCP replies. Sent on client request by default.
+Subnetzmaske, Gateway, DNS und Lease-Dauer bleiben im Hauptfenster. Protokolloptionen werden automatisch erzeugt.	Subnet mask, gateway, DNS and lease duration remain in the main window. Protocol options are generated automatically.
+Keine zusätzlichen Optionen konfiguriert.	No additional options configured.
+IPv4-Adressen durch Komma trennen, z. B. 192.168.50.10, 192.168.50.11.	Separate IPv4 addresses with commas, e.g. 192.168.50.10, 192.168.50.11.
+Hexbytes, z. B. 01 04 C0 A8 32 FE. Strukturierte Herstellerdaten und Unteroptionen vollständig kodieren.	Hex bytes, e.g. 01 04 C0 A8 32 FE. Encode structured vendor data and suboptions in full.
+Domainnamen durch Komma trennen; die Anwendung kodiert DNS-Labels gemäß Option 119.	Separate domain names with commas; the application encodes DNS labels for option 119.
+Eine Route je Zeile: 10.20.0.0/16=192.168.50.254. Eine Standardroute: 0.0.0.0/0=192.168.50.254.	One route per line: 10.20.0.0/16=192.168.50.254. Default route: 0.0.0.0/0=192.168.50.254.
+true/false, ja/nein oder 1/0.	true/false or 1/0.
+Ganzzahl von 0 bis 255.	Integer from 0 to 255.
+Ganzzahl von 0 bis 65.535 (Network Byte Order).	Integer from 0 to 65,535 (network byte order).
+Ganzzahl von 0 bis 4.294.967.295 (Network Byte Order).	Integer from 0 to 4,294,967,295 (network byte order).
+Eine IPv4-Adresse mit vier dezimalen Oktetten.	An IPv4 address with four decimal octets.
+ASCII-Text, z. B. commissioning.example oder firmware.bin.	ASCII text, e.g. commissioning.example or firmware.bin.
+Dieser Code ist protokollgesteuert, clientseitig oder wird im Hauptformular festgelegt. Er kann hier nicht zusätzlich gesendet werden.	This code is managed by the protocol, the client or the main form. It cannot be sent as an additional option.
+Bitte einen Optionscode zwischen 1 und 254 eingeben.	Enter an option code between 1 and 254.
+Dieser Optionscode ist bereits vorhanden. Den bestehenden Eintrag bearbeiten.	This option code already exists. Edit the existing entry.
+Optionscode muss zwischen 1 und 254 liegen.	Option code must be between 1 and 254.
+Optionscode existiert bereits.	Option code already exists.
+Bitte die markierten Werte der Zusatzoptionen korrigieren.	Correct the highlighted additional option values.
+Rechtsklick zum Kopieren	Right-click to copy
+Nur diesen Lease löschen	Delete only this lease
+Tabellenwert kopiert.	Table value copied.
+Kopiert: 	Copied: 
+Kopieren nicht möglich: 	Cannot copy: 
+Lease inzwischen geändert. Tabelle wurde aktualisiert.	Lease changed in the meantime. Table refreshed.
+Der Lease wurde inzwischen geändert oder entfernt. Die Tabelle wurde aktualisiert.	The lease was changed or removed in the meantime. The table has been refreshed.
+Lease konnte nicht gelöscht werden: 	Could not delete lease: 
+Lease Reset fehlgeschlagen: 	Lease reset failed: 
+Alle gespeicherten Leases gelöscht. Clients behalten ihre Adresse bis zur Erneuerung oder zum Ablauf.	All saved leases deleted. Clients keep their addresses until renewal or expiry.
+Leases gelöscht. Clients behalten ihre lokale Adresse bis zur Erneuerung oder zum Ablauf.	Leases deleted. Clients keep their local addresses until renewal or expiry.
+Bereich konnte nicht entfernt werden: 	Could not remove range: 
+Bereich konnte nicht geladen werden: 	Could not load range: 
+Bereiche konnten nicht geladen werden: 	Could not load ranges: 
+Bereiche: 	Ranges: 
+Bereich „	Range “
+“ entfernt. Die aktuellen Einstellungen bleiben erhalten.	” removed. Current settings are retained.
+“ entfernt; aktuelle Einstellungen bleiben erhalten.	” removed; current settings are retained.
+“ geladen.	” loaded.
+“ gespeichert.	” saved.
+ gelöscht.	 deleted.
+ löschen	 delete
+ aktivieren	 enable
+ entfernen	 remove
+Wert für Option 	Value for option 
+Verbleibende Leasezeit: 	Remaining lease time: 
+Bitte einen Namen eingeben.	Enter a name.
+Bitte einen Namen für den Bereich eingeben.	Enter a name for the range.
+Bitte eine LAN-Karte auswählen.	Select a network adapter.
+Keine Schnittstelle	No interface
+Keine aktive IPv4-LAN-Karte gefunden. Netzwerk verbinden und aktualisieren.	No active IPv4 network adapter found. Connect the network and refresh.
+Keine aktive IPv4-LAN-Karte. Netzwerk verbinden und aktualisieren.	No active IPv4 network adapter. Connect the network and refresh.
+Die Netzwerkschnittstelle für diesen Bereich ist nicht verfügbar oder ihre IPv4-Konfiguration wurde geändert.	The network interface for this range is unavailable or its IPv4 configuration has changed.
+Netzwerkschnittstelle dieses Bereichs ist nicht verfügbar oder wurde umkonfiguriert.	This range's network interface is unavailable or has been reconfigured.
+Werte für 	Defaults for 
+ vorbelegt. Der Server ist gestoppt.	 filled in. The server is stopped.
+Server gestoppt. Bereits vergebene Leases bleiben bis zu ihrem Ablauf gültig.	Server stopped. Existing leases remain valid until expiry.
+Server gestoppt. Bereits vergebene Leases bleiben bis zum Ablauf gültig.	Server stopped. Existing leases remain valid until expiry.
+Lease-Dauer muss eine positive ganze Zahl sein.	Lease duration must be a positive integer.
+Lease-Dauer ist zu groß.	Lease duration is too large.
+Die Lease-Dauer muss eine positive ganze Zahl sein und darf 4.294.967.294 Sekunden nicht überschreiten.	Lease duration must be a positive integer and must not exceed 4,294,967,294 seconds.
+UDP-Port 67 ist bereits belegt. Einen anderen DHCP-Server oder die Windows-Internetfreigabe prüfen.	UDP port 67 is already in use. Check for another DHCP server or Windows Internet Connection Sharing.
+Netzwerkfehler: 	Network error: 
+ (Windows-Code 	 (Windows error 
+). Firewallfreigabe für diese EXE und UDP 67/68 prüfen.	). Check firewall access for this executable and UDP 67/68.
+Einstellungen konnten nicht gespeichert werden: 	Could not save settings: 
+Der EXE-Ordner ist nicht beschreibbar. Einstellungen und Leases werden unter 	The executable folder is not writable. Settings and leases are stored in 
+ gespeichert.	.
+Netzwerkeinstellungen des ausgewählten Adapters öffnen	Open network settings for the selected adapter
+IPv4-Adresse, Subnetzmaske, Gateway und DNS des ausgewählten Adapters in Windows ändern	Change the selected adapter's IPv4 address, subnet mask, gateway and DNS in Windows
+Windows-Netzwerkeinstellungen geöffnet. Schnittstellenwerte wurden aktualisiert.	Windows network settings opened. Interface values refreshed.
+Netzwerkeinstellungen konnten nicht geöffnet werden: 	Could not open network settings: 
+Netzwerkeinstellungen · 	Network settings · 
+IPv4 automatisch per DHCP beziehen	Obtain IPv4 automatically using DHCP
+DNS-Adressen, kommagetrennt · leer = automatisch	DNS addresses, comma-separated · empty = automatic
+Benötigt Administratorrechte in der aktuellen Sitzung.	Requires administrator privileges in the current session.
+Eine IP-Änderung kann die SSH-Verbindung unterbrechen.	Changing the IP address can disconnect SSH.
+Ungültige Subnetzmaske.	Invalid subnet mask.
+Netzwerkeinstellungen: Zeitüberschreitung. Adapterzustand prüfen.	Network settings timed out. Check adapter state.
+Adaptereinstellungen übernommen.	Adapter settings applied.
+Adapteradresse per DHCP	Adapter address assigned by DHCP
+Statische Adapteradresse	Static adapter address
+ · Adapteradresse per DHCP	 · adapter address assigned by DHCP
+ · Statische Adapteradresse	 · static adapter address
+Beliebige Taste zum Schließen.	Press any key to close.
+Zum Beenden F10 oder Ctrl+Q drücken.	Press F10 or Ctrl+Q to quit.
+EINGABE · Enter: übernehmen · Esc: verwerfen · Mehrzeilig: Ctrl+Enter übernimmt	EDIT · Enter: apply · Esc: revert · Multiline: Ctrl+Enter applies
+Pfeile: Auswahl · Enter: Eingabe/Aktion · Esc: zurück · F1: Hilfe · F10/Ctrl+Q: Ende	Arrows: select · Enter: edit/action · Esc: back · F1: help · F10/Ctrl+Q: quit
+ ←/→: Spalten  PgUp/PgDn: Zeilen  Kopf ziehen: Breite 	 ←/→: columns  PgUp/PgDn: rows  Drag header: width 
+Pfeiltasten: Felder und Buttons auswählen\nEnter: Eingabefeld aktivieren, Eingabe übernehmen\nEscape: Eingabe verwerfen\nMehrzeilige Eingabe: Ctrl+Enter übernimmt\nEnter / Leertaste: Button oder Dropdown öffnen\nCtrl+A / Ctrl+V: Auswählen / Einfügen\nRechtsklick auf Tabellenwert: Kopieren\nPfeiltasten / Bild auf, ab: Tabelle und Monitor\nSpaltenkopf / Monitor-Trennlinie ziehen: Breite ändern\nOptionstitel anklicken: Code, Format, Aktivierung bearbeiten\nEscape: Dialog schließen · F10 / Ctrl+Q: Programm beenden	Arrow keys: select fields and buttons\nEnter: activate field, apply edit\nEscape: revert edit\nMultiline editing: Ctrl+Enter applies\nEnter / Space: activate button or dropdown\nCtrl+A / Ctrl+V: select all / paste\nRight-click table value: copy\nArrows / Page Up, Down: table and monitor\nDrag column header / monitor divider: resize\nClick option heading: edit code, format, enabled state\nEscape: close dialog · F10 / Ctrl+Q: quit
+\nDatenformat: 	\nData format: 
+\n\nIPv4-Liste: Adressen durch Komma trennen.\nRouten: eine Route je Zeile, z. B. 10.20.0.0/16=192.168.50.254\nDomainliste: Namen durch Komma trennen.\nHex: Bytes, z. B. 01 04 C0 A8 32 FE	\n\nIPv4 list: separate addresses with commas.\nRoutes: one per line, e.g. 10.20.0.0/16=192.168.50.254\nDomain list: separate names with commas.\nHex: bytes, e.g. 01 04 C0 A8 32 FE
+--tui benötigt eine interaktive PowerShell-/Terminalsitzung. Bei SSH bitte ein Terminal anfordern (ssh -t). Es wird kein Fenster geöffnet.	--tui requires an interactive PowerShell/terminal session. Request a terminal for SSH (ssh -t). No window will be opened.
+Bitte die Programmdatei wieder KubDHCP.exe nennen. Die Versionsnummer gehört in den Ordnernamen, nicht in den EXE-Dateinamen.	Rename the program file back to KubDHCP.exe. Put version numbers in the folder name, not the executable filename.
+KubDHCP läuft bereits aus diesem Ordner.	KubDHCP is already running from this folder.
+KubDHCP läuft bereits aus diesem Ordner. WinUI und TUI teilen denselben Server und Datenordner.	KubDHCP is already running from this folder. WinUI and TUI share the same server and data folder.
+KubDHCP konnte nicht gestartet werden.\n	KubDHCP could not start.\n
+KubDHCP konnte nicht gestartet werden.\n\n	KubDHCP could not start.\n\n
+\nDiagnose: 	\nDiagnostics: 
+\n\nDiagnose: 	\n\nDiagnostics: 
+Es bestehen noch gültige Leases außerhalb des neuen Pools. Pool wieder erweitern oder deren Ablauf abwarten.	Valid leases still exist outside the new pool. Expand the pool again or wait for them to expire.
+Die Subnetzmaske muss zusammenhängend sein und einen Pool von Hostadressen zulassen (/1 bis /30).	The subnet mask must be contiguous and allow a pool of host addresses (/1 to /30).
+Serveradresse und Subnetzmaske müssen zur ausgewählten LAN-Karte passen.	Server address and subnet mask must match the selected adapter.
+Die LAN-Karte benötigt eine reguläre IPv4-Adresse. Bitte die Windows-IP-Konfiguration prüfen.	The adapter needs a regular IPv4 address. Check the Windows IP configuration.
+Start- und Stop-IP müssen einen gültigen Hostbereich im Subnetz der LAN-Karte bilden.	Start and end IP must form a valid host range in the adapter's subnet.
+Bitte eine endliche Lease-Dauer zwischen 1 und 4.294.967.294 Sekunden eingeben.	Enter a finite lease duration between 1 and 4,294,967,294 seconds.
+Gateway und DNS müssen gültige Unicast-Hostadressen sein.	Gateway and DNS must be valid unicast host addresses.
+Der Gateway muss im lokalen Subnetz liegen.	The gateway must be in the local subnet.
+Bitte zuerst den primären DNS-Server angeben.	Enter the primary DNS server first.
+Der Adresspool darf keine lokale Adapteradresse, Gateway- oder DNS-Adresse enthalten.	The pool must not contain any local adapter, gateway or DNS address.
+Ein zusätzlicher Optionscode darf nur einmal vorkommen.	Each additional option code may occur only once.
+Ungültige IPv4-Adresse: 	Invalid IPv4 address: 
+ wird vom Protokoll oder Hauptformular verwaltet und kann nicht zusätzlich gesendet werden.	 is managed by the protocol or main form and cannot be sent as an additional option.
+Der Optionswert darf nicht leer sein.	The option value must not be empty.
+Boolean erwartet true/false oder 1/0.	Boolean requires true/false or 1/0.
+Unbekanntes Optionsformat.	Unknown option format.
+Ein zusätzlicher Optionswert muss 1 bis 3500 Bytes enthalten.	An additional option value must contain 1 to 3500 bytes.
+Domainname ist zu lang.	Domain name is too long.
+Ungültiges DNS-Label.	Invalid DNS label.
+Route erwartet Ziel/Präfix=Gateway, z. B. 10.20.0.0/16=192.168.50.254.	A route requires destination/prefix=gateway, e.g. 10.20.0.0/16=192.168.50.254.
+Das Routenziel muss eine Netzadresse sein.	The route destination must be a network address.
+Die gespeicherten Bereiche sind leer oder beschädigt.	The saved ranges are empty or damaged.
+Die gespeicherten Bereiche enthalten ungültige oder doppelte Namen.	The saved ranges contain invalid or duplicate names.
+Leasedatei ist leer.	Lease file is empty.
+Leasedatei enthält ungültige Einträge.	Lease file contains invalid entries.
+Leasedatei enthält doppelte aktive IP-Adressen.	Lease file contains duplicate active IP addresses.
+Lease-Zustand ist beschädigt. Start gesperrt; leases.json und Sicherung im Datenordner prüfen.	Lease state is damaged. Startup blocked; check leases.json and its backup in the data folder.
+DHCP-Antwort (	DHCP reply (
+ Bytes) überschreitet die vom Client erlaubte Größe (	 bytes) exceeds the client's maximum size (
+ Bytes). Zusätzliche Optionen verkleinern.	 bytes). Reduce additional options.
+Der Server läuft bereits.	The server is already running.
+Die gewählte LAN-Karte ist nicht mehr verfügbar.	The selected network adapter is no longer available.
+Gestartet auf 	Started on 
+), UDP 67. Initiale Antworten verwenden den RFC-2131-Broadcast-Fallback; Renewals sind Unicast.	), UDP 67. Initial replies use the RFC 2131 broadcast fallback; renewals use unicast.
+ · Maske 	 · mask 
+ · Bereich 	 · range 
+EMPFANG UDP 	RECEIVE UDP 
+ANFRAGE · 	REQUEST · 
+ANTWORT UDP 	REPLY UDP 
+IGNORIERT · 	IGNORED · 
+KEINE ANTWORT	NO REPLY
+KEINE ANTWORT · 	NO REPLY · 
+ARP PRÜFUNG · 	ARP CHECK · 
+ARP ERGEBNIS · 	ARP RESULT · 
+SENDEN FEHLGESCHLAGEN · 	SEND FAILED · 
+VERARBEITUNGSFEHLER · 	PROCESSING ERROR · 
+LEASE ENTFERNT · Client 	LEASE REMOVED · Client 
+ Bytes · Schnittstelle 	 bytes · interface 
+ · andere/unbekannte Schnittstelle, leerer Inhalt oder Quellport ungleich 68.	 · different/unknown interface, empty payload or source port other than 68.
+ · ungültiges oder unvollständiges DHCP-Paket.	 · invalid or incomplete DHCP packet.
+ wird nicht unterstützt.	 is not supported.
+ · Ist 	 · Is 
+ bereits belegt? Quelle 	 already occupied? Source 
+ · kein antwortender Besitzer ermittelt.	 · no responding owner found.
+ · Besitzer 	 · owner 
+Adresskonflikt: 	Address conflict: 
+ für 10 Minuten gesperrt.	 quarantined for 10 minutes.
+DHCP-Empfang beendet: 	DHCP receive loop ended: 
+LAN-Karte getrennt oder IPv4-Konfiguration geändert. Server wurde gestoppt.	Network adapter disconnected or IPv4 configuration changed. Server stopped.
+Adapterüberwachung fehlgeschlagen: 	Adapter monitoring failed: 
+Server gestoppt · UDP-Empfang beendet.	Server stopped · UDP receive loop ended.
+DHCP-Antwort wurde nicht vollständig gesendet.	DHCP reply was not sent in full.
+ Meldungen bei hoher Last ausgelassen.	 messages dropped under high load.
+ Meldungen wegen hoher Last ausgelassen.	 messages dropped under high load.
+ · Transaktion 	 · transaction 
+ · aktuelle IP 	 · current IP 
+ · Optionen: 	 · options: 
+nicht dekodierbar	cannot be decoded
+RELEASE verarbeitet, falls ein passender Lease besteht; keine Antwort vorgesehen.	RELEASE processed if a matching lease exists; no reply is expected.
+DECLINE geprüft; passende angebotene/aktive Adresse wird gesperrt. Keine Antwort vorgesehen.	DECLINE checked; a matching offered/active address is quarantined. No reply is expected.
+Kein Angebot möglich: kein freier oder konfliktfreier Eintrag im Adresspool.	No offer possible: no free or conflict-free address in the pool.
+Anfrage richtet sich an DHCP-Server 	Request is addressed to DHCP server 
+; keine Antwort von diesem Server.	; this server will not reply.
+Keine Antwort: Anfrage passt nicht zu unserem Subnetz, Nachrichtentyp oder einer gültigen Reservierung/einem bekannten Lease.	No reply: request does not match our subnet, message type or a valid reservation/known lease.
+sucht eine Adresse	searching for an address
+fordert/bestätigt/erneuert eine Adresse	requesting/confirming/renewing an address
+gibt seine Adresse frei	releasing its address
+meldet einen Adresskonflikt	reporting an address conflict
+fragt Konfiguration ohne neue Adresse an	requesting configuration without a new address
+Adresse angeboten	address offered
+Anfrage bestätigt	request acknowledged
+Adressanfrage abgelehnt	address request rejected
+DHCP-Nachricht	DHCP message
+Domäne	Domain
+gewünschte IP	requested IP
+angefragte Optionen	requested options
+max. Nachrichtengröße	max. message size
+Erneuerung nach	renewal after
+Neubindung nach	rebinding after
+Bootdatei	Boot file
+● Gestoppt	● Stopped
+● Läuft	● Running
+IPv4-Liste	IPv4 list
+Domainliste	Domain list
+Routen	Routes
+
+DHCP-Geräte: Zeitstempel, IP, MAC-Adresse, Client-ID, Hostname, Hersteller und Rest-Leasezeit	DHCP devices: timestamp, IP, MAC address, client ID, hostname, vendor and lease remaining
+KubDHCP läuft bereits für dieses Benutzerprofil.	KubDHCP is already running for this user profile.
+KubDHCP läuft bereits für dieses Benutzerprofil. WinUI und TUI teilen denselben Server und Datenordner.	KubDHCP is already running for this user profile. WinUI and TUI share the same server and data folder.

@@ -4,6 +4,7 @@
     <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Data\English.tsv" />
     <EmbeddedResource Include="Data\options.json" />
     <EmbeddedResource Include="Data\oui.tsv.gz" />
   </ItemGroup>

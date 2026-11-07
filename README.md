@@ -1,171 +1,172 @@
-# KubDHCP
+# KubDHCP — User guide
 
-Portabler DHCPv4-Server in C# und WinUI 3 zur Erstinbetriebnahme direkt angeschlossener Geräte. Der Server läuft ausschließlich innerhalb der geöffneten Anwendung. Er startet immer gestoppt und wird beim Schließen beendet.
+[Deutsch](docs/Manual.de.md) · [Latest release](https://github.com/nkxy1/KubDHCP/releases/latest)
 
-## Starten
+KubDHCP is a portable DHCPv4 server for commissioning directly connected devices on Windows x64. WinUI and the terminal interface share one executable, DHCP engine, version and data store. The server always starts **stopped** and runs only while the application is open.
 
-Die fertige Ausgabe ist **`dist/KubDHCP.exe`** für Windows x64. Nur diese EXE ist zur Weitergabe erforderlich. Es ist keine separate Installation von .NET, Windows App Runtime oder eines Windows-Dienstes erforderlich. Beim ersten Start entpackt die .NET-Einzeldateibereitstellung die enthaltenen Laufzeitdateien automatisch in ihren Cache.
+## Download, launch and language
 
-1. EXE in einen beschreibbaren Ordner kopieren und starten.
-2. Die gewünschte IPv4-LAN-Karte auswählen. Pool, Subnetzmaske, Gateway und DNS werden aus deren Konfiguration vorbelegt; die Lease-Dauer beginnt mit einer Stunde.
-3. Vorschläge prüfen und bei Bedarf ändern. Der vorgeschlagene Pool spart lokale Adapter-, Gateway- und DNS-Adressen aus. Er ist keine Garantie, dass diese IP-Adressen nicht anderweitig im Netz verwendet werden.
-4. Weitere Optionen über **Option hinzufügen** neben der Lease-Dauer konfigurieren.
-5. **Server starten** wählen. Eine gegebenenfalls von Windows erforderliche Firewallfreigabe muss DHCP auf dem gewählten Netz ermöglichen. KubDHCP verändert keine Firewall-, Adapter-, Routing- oder Diensteinstellungen.
-6. Die Tabelle zeigt vom Server bestätigte Leases, den Zeitpunkt der letzten Bestätigung, IP, MAC-Adresse, registrierten Hersteller und Restlaufzeit.
+Download **KubDHCP.exe** from the release assets. Keep that filename; put versions in the containing folder, such as `v1.0.16/KubDHCP.exe`. No separate .NET runtime, Windows App Runtime or service installation is needed. The bundled runtime extracts into its normal cache on first launch.
 
-Gateway und DNS sind optional. Das Verteilen dieser Angaben stellt selbst keinen Router oder DNS-Server bereit. Es wird immer genau eine LAN-Karte bedient. Die Auswahl kann erst nach Stoppen geändert werden. Bei Adapterverlust oder Adressänderung stoppt der Server.
+Double-click the EXE for WinUI. For the terminal interface, run:
 
-## Oberfläche
+```powershell
+& 'C:\Tools\KubDHCP\KubDHCP.exe' --tui
+```
 
-Die große Einleitungsüberschrift und ihr Untertitel sind entfernt. Der Button **Option hinzufügen** liegt in derselben Formularzeile wie **Lease-Dauer**, solange die Fensterbreite zwei oder mehr Spalten zulässt. Bei sehr schmalen Fenstern werden die Felder untereinander angeordnet; der Fensterinhalt ist scrollbar. Die Gerätetabelle bleibt unter dem Formular.
+The interface uses **German for German Windows display languages and English for all others**. Restart after changing the Windows display language. Override for one launch with `--language=en` or `--language=de`; both work with WinUI and `--tui`.
 
-Der Optionsdialog bietet den lokalen IANA-Katalog, eigene Optionscodes, aktivierbare Einträge sowie Hinzufügen, Bearbeiten und Entfernen. Unterstützte Formate: ASCII-Text, IPv4, IPv4-Liste, UInt8/16/32, Boolean, Domainlisten (119), Routen (121/249) und Hex-Rohdaten. Herstelleroptionen können einschließlich ihrer Unterstrukturen als Hexdaten eingegeben werden. Protokollgesteuerte und clientseitige Optionen sind gegen zusätzliche Aussendung geschützt.
+Use `--demo` for synthetic examples without opening DHCP sockets or changing adapters. It disables server start and stores disposable example data under `%TEMP%\KubDHCP-demo`. For example:
 
-Zusatzoptionen werden standardmäßig nur bei Aufnahme in die Parameter Request List des Clients gesendet. Für Geräte, die Optionen ohne Anfrage benötigen, gibt es **Auch ohne Client-Anfrage senden**. Lange Werte werden nach RFC 3396 verkettet; überschreitet die gesamte Antwort die Clientgrenze, wird sie mit Diagnose verworfen und nicht still abgeschnitten. Option Overload wird beim Empfang ausgewertet, beim Senden nicht verwendet.
+```powershell
+& '.\KubDHCP.exe' --demo --language=en
+& '.\KubDHCP.exe' --tui --demo --language=en
+```
 
-## Daten und Portabilität
+Use a deliberately chosen commissioning network. KubDHCP does not reliably detect other DHCP servers. An unanswered ARP probe does not guarantee that an IP address is free.
 
-Im EXE-Ordner wird **`KubDHCP.data`** angelegt:
+## WinUI: configure and start
 
-- `settings.json`: zuletzt gültige Konfiguration und zusätzliche Optionen.
-- `leases.json`: atomar gespeicherte Lease-Belegungen; vorhandene aktive Leases verhindern Doppelvergabe nach Neustarts.
-- `.bak`-Dateien: vorheriger gültiger Speicherstand.
-- `KubDHCP.log`: Netzwerk- und Fehlerdiagnose nach Serverstart.
-- `Lizenzen.txt`: mitgelieferte Lizenztexte und Datenquellen.
+![Real English WinUI application with synthetic devices](docs/images/gui-en.png)
 
-Wenn der EXE-Ordner nicht beschreibbar ist, wird `%LOCALAPPDATA%\KubDHCP` verwendet und dieser Pfad angezeigt. Für einen vollständig mitnehmbaren Zustand EXE und Datenordner zusammen kopieren. Die EXE enthält die komplette Offline-Herstellerdatenbank (54.396 IEEE-MA-L/MA-M/MA-S-Präfixe, Abruf 07.11.2026). Es erfolgen keine Online-MAC-Abfragen. Lokal administrierte MAC-Adressen erhalten keinen vermeintlichen Hersteller.
+This real WinUI screenshot uses demo mode. Device identities and monitor traffic are examples; no DHCP server is running.
 
-Eine bestehende Lease bleibt nach dem Stoppen auf dem Client bis zu ihrem Ablauf gültig. Stoppen entzieht keine IP-Adresse. Bei beschädigter Leasedatei sperrt die Anwendung den Start; Sicherung und Diagnose prüfen, statt bei noch aktiven Clients blind alle Belegungen zu löschen.
+1. Select the **Network interface** connected to your devices. Only active IPv4 adapters are listed. The circular-arrow button refreshes the list after connecting or reconfiguring an adapter.
+2. Check **Start IP**, **End IP** and **Subnet mask**. Defaults come from the adapter; a `.100–.150` pool is preferred when the subnet and infrastructure addresses permit it. Local adapter, gateway and DNS addresses are excluded from the proposal. Other statically assigned devices cannot be detected reliably.
+3. Enter **Gateway**, **Primary DNS server** and optionally **Secondary DNS server**, or leave these fields empty. A secondary DNS server requires a primary one. The gateway must be in the local subnet. Advertising these addresses does not make KubDHCP a router or DNS server.
+4. Set a positive whole-number **Lease duration** in seconds, minutes, hours or days. The resulting duration must be 1–4,294,967,294 seconds. A client may request a shorter duration.
+5. Configure additional DHCP options if required, then click **play** to start the server. The status changes to running and the button becomes **stop**. Hover over icons for tooltips.
+6. Stop before changing the adapter, pool or options. Closing the application also stops the server. Stopping does not revoke IP addresses already held by clients.
 
-## Protokoll und Umfang
+The program validates subnet masks, pool bounds, infrastructure overlap, lease duration and option encoding. Active leases outside a smaller proposed pool prevent startup. Disconnection or a change in the selected IPv4 interface configuration stops the server.
 
-DISCOVER/OFFER, REQUEST/ACK/NAK, Renew/Rebind, RELEASE, DECLINE und INFORM; Ethernet-Hardwareadressen, direkte IPv4-Netze, Serverport UDP 67 und Clientport UDP 68. Relay-Anfragen werden nicht bedient. DHCPv6, BOOTP, Reservierungsverwaltung, DNS, NAT, Routing und Dateiübertragung sind nicht enthalten.
+The **gear** opens Windows properties for the selected adapter. Changes there affect Windows and may require administrator privileges. Return to KubDHCP to refresh the values. Starting the DHCP server does not automatically alter adapter, firewall, routing or service settings.
 
-Empfang über `IP_PKTINFO`: Pakete anderer oder nicht bestimmbarer Eingangsinterfaces werden nicht beantwortet. Senden über `WSASendMsg` mit expliziter Quell-IP und Interface-Index. Initiale Antworten verwenden den in RFC 2131 Abschnitt 4.1 erlaubten Broadcast-Fallback, weil normale UDP-Sockets keine zuverlässige L2-Unicastzustellung an noch unkonfigurierte Clients garantieren; Renewals mit gültiger Clientadresse werden per Unicast beantwortet. Dafür sind kein Paketerfassungstreiber und keine Änderung der Windows-Nachbartabelle erforderlich.
+### Named ranges and drafts
 
-Eine ARP-Abfrage vor dem OFFER sperrt erkannte fremde Belegungen für zehn Minuten. Ein ausbleibendes ARP-Ergebnis beweist keine freie Adresse. Ein vorhandener fremder DHCP-Server wird von dieser Version nicht zuverlässig erkannt; das Werkzeug ist für ein bewusst gewähltes Inbetriebnahmenetz gedacht.
+A named range stores adapter selection, pool, mask, gateway, DNS, lease duration and additional options. Click **save**, enter a name and confirm. Reusing a name, ignoring case and surrounding whitespace, replaces that saved range. Select a name in **Saved ranges** to restore it while stopped. Its adapter and IPv4 configuration must still match.
 
-## Bauen und prüfen
+The adjacent **X** deletes the selected saved range while retaining current form values, leases and other ranges. Valid form edits are also persisted as the current draft; named ranges are independently reusable configurations.
 
-.NET SDK **10.0.403** oder eine passende neuere Patchversion; Windows x64 und NuGet-Zugriff beziehungsweise vorhandener Paketcache. Visual Studio ist für den verwendeten Build nicht erforderlich. Die nötigen Build-Werkzeuge kommen als NuGet-Pakete.
+### Additional options
+
+![English additional-options dialog](docs/images/options-en.png)
+
+Click **Add option**. Select an offline IANA catalog entry or a custom code from 1 to 254, choose the format and enter a value. The dialog shows descriptions, references and format help. Duplicate codes and protocol/client-managed options are rejected. Values controlled by the main form cannot be added again here.
+
+| Format | Example and interpretation |
+| --- | --- |
+| Text (ASCII) | `lab.example`; for example domain (15), boot server (66), boot filename (67) |
+| IPv4 | `192.0.2.10`, four decimal octets |
+| IPv4 list | `192.0.2.10,192.0.2.11`; commas, semicolons or newlines separate addresses |
+| UInt8 / UInt16 / UInt32 | `120`; unsigned integer, multi-byte values in network byte order |
+| Boolean | `true`/`false`, `1`/`0`, or German `ja`/`nein` |
+| Domain list | `lab.example,office.example`; encoded as DNS labels for option 119 |
+| Routes | `10.20.0.0/16=192.0.2.254`; one network/prefix=gateway per line or separated by semicolons, options 121/249 |
+| Hex | `01 04 C0 00 02 FE`; complete raw bytes, including any vendor suboptions |
+
+Use **Edit** to modify an entry, its checkbox to enable/disable it, and its remove icon to delete it. Values can also be edited inline in the main form. Invalid inline values are highlighted and prevent startup until corrected. In the TUI, click an option title to edit its full definition. Options are read-only while running.
+
+Extra options normally go only to clients requesting their codes in the Parameter Request List. **Send even if not requested by client** overrides this for the selected option. Long values are concatenated according to RFC 3396. Replies exceeding the client's allowed size are rejected with a diagnostic rather than truncated. Incoming option overload is supported; outgoing overload is not used.
+
+### Lease table
+
+Confirmed leases show the last confirmation timestamp, IP, MAC, supplied client ID, hostname, offline vendor lookup and remaining time/progress. Offers alone do not create confirmed rows. Renewals update the row; released and expired rows remain as history. Missing supplied IDs or hostnames appear as a dash. The supplied client ID takes precedence over MAC for identity; hostnames come from hostname/FQDN options.
+
+Vendor lookup uses the bundled IEEE prefix database without online requests. Locally administered MAC addresses are labelled accordingly.
+
+- **Right-click** a value to copy that single value.
+- **Drag column dividers** to resize adjacent columns; scroll horizontally for wide tables.
+- **X on a lease row** deletes that exact stored record, including while running. A stale selection cannot delete a renewed row. Deletion does not revoke the client's current address.
+- **Reset leases** deletes all saved lease records and requires a stopped server. Named ranges remain intact. Account for clients that may still hold unexpired leases before resetting.
+
+The active count and shared version are displayed near the table/footer. The form adapts to window width and becomes scrollable on smaller screens.
+
+### Network monitor
+
+The monitor icon opens the side panel. It shows received and ignored packets, requests/replies, ARP probes, conflicts and diagnostics, including client identity, transaction, addresses, lease times and options actually received/sent. It monitors this server's activity rather than all traffic on the network.
+
+Drag the divider to resize. Scrolling upward pauses the live view with a blinking **PAUSE** indicator. Click the live/pause control for manual pause/resume. Scrolling to the bottom resumes following unless manually paused. Resuming displays buffered messages. Hiding the panel preserves its width and the main window's position/height. The bounded queue reports dropped messages under heavy load.
+
+## Terminal interface
+
+![English TUI](docs/images/tui-en.png)
+
+![English TUI with network monitor](docs/images/tui-monitor-en.png)
+
+These TUI snapshots are exported from the actual application's character/colour buffers with synthetic test devices, rather than drawn mockups. Native terminal input/output and the validation DHCP exchange are separately exercised on isolated loopback ports.
+
+`--tui` runs in the calling interactive PowerShell/SSH terminal. It never allocates a replacement console or opens a graphical dialog. PowerShell waits until exit; the previous screen, input modes and cursor are restored. Resizing adapts columns, scrolling and dialogs without changing WinUI. WinUI and TUI cannot run concurrently against the same user's data.
+
+| Action | Keys or mouse |
+| --- | --- |
+| Select | Spatial arrow navigation; Tab / Shift+Tab; click |
+| Activate a selected field | Enter; selecting alone does not accept typing |
+| Apply / revert editing | Enter / Escape; Ctrl+Enter for multiline input |
+| Select all / paste | Ctrl+A / Ctrl+V while editing, or terminal paste |
+| Activate button/dropdown | Enter / Space or click |
+| Table/monitor interaction | Enter, arrows and Page Up/Down; Escape returns to navigation |
+| Copy table value | Right-click |
+| Resize columns/monitor | Drag header/divider |
+| Edit full option definition | Click option title |
+| Help / close dialog | F1 / Escape |
+| Quit | F10 / Ctrl+Q |
+
+The top buttons provide start/stop, monitor, save range (`S`), remove range (`X`), adapter settings (gear) and refresh. Per-row `X` and **Reset leases** match WinUI. Fields, saved ranges, additional options, lease history and monitor behavior are shared.
+
+The terminal adapter dialog can request DHCP addressing or apply static IPv4, mask, gateway and DNS using Windows `netsh`. It requires an elevated session. Changing the SSH interface's IP can disconnect you; read the warning before applying. No graphical adapter dialog is opened.
+
+### SSH
+
+Connect to a Windows SSH server with pseudoconsole support using `ssh -t user@windows-host`, then run `KubDHCP.exe --tui` there. The DHCP server uses the **remote computer's** interfaces, firewall permissions and user profile. Mouse control requires SGR mouse support/forwarding. Shift commonly allows local terminal selection while mouse reporting is enabled. Remote copy uses OSC 52, which the local terminal must allow; KubDHCP does not write to the remote desktop clipboard in SSH sessions. Local ConPTY tests do not claim to verify an actual remote SSH host.
+
+## User data, backups and migration
+
+From v1.0.16, normal application data is stored in the current Windows user's profile:
+
+```text
+%LOCALAPPDATA%\KubDHCP
+```
+
+Usually this is `C:\Users\<user>\AppData\Local\KubDHCP`. Both interfaces and different EXE copies/versions share it. Moving the EXE does not move data. No application state is written next to the EXE.
+
+| File | Purpose |
+| --- | --- |
+| `settings.json` | Current valid configuration and extra options |
+| `ranges.json` | Named saved configurations |
+| `leases.json` | Durable lease allocations across restarts |
+| `*.json.bak` | Previous versions of corresponding JSON files |
+| `KubDHCP.log` | Server activity/error diagnostics |
+| `Lizenzen.txt`, `KubDHCP.ico` | Bundled notices and extracted icon |
+
+On first start, if the user data folder does not exist, legacy files from `KubDHCP.data` beside that EXE are copied into the profile. The complete copy is staged before activation; originals are retained. An existing user folder takes priority, with no merge/overwrite. Avoid running an older EXE against the old copy after migration, because it would maintain separate lease state.
+
+Stop the application before backing up, transferring or restoring the complete data folder. Corrupt lease state blocks startup: inspect `leases.json` and its backup instead of blindly deleting allocations while clients may still use them. Startup diagnostics may be written to `%TEMP%\KubDHCP-startup.log` or `%TEMP%\KubDHCP-unhandled.log`. Demo and automated test data use separate temporary folders.
+
+## Troubleshooting and scope
+
+| Symptom | Check |
+| --- | --- |
+| No adapter | Connect the network, assign a regular IPv4 address in Windows, refresh. Loopback/tunnel adapters are excluded; invalid/APIPA server addresses are rejected. |
+| UDP 67 busy | Check another DHCP server or Internet Connection Sharing. |
+| No lease | Check adapter, subnet/pool, cabling, firewall access for the EXE and UDP 67/68. Inspect ignored packets, conflicts and oversized options in the monitor. |
+| Pool exhausted | Inspect active leases, pending offers and conflicts. Offers expire after 30 seconds; conflicts are quarantined for ten minutes. RELEASE frees an address and keeps history. |
+| Options read-only | Stop before modifying configuration. |
+| Saved range unavailable | Its original adapter/address/mask must still match. |
+| TUI cannot start | Use an interactive terminal; request one with `ssh -t`. No fallback window is opened. |
+
+Supported: DHCPv4 DISCOVER/OFFER, REQUEST/ACK/NAK, renew/rebind, RELEASE, DECLINE and INFORM for direct Ethernet clients. Incoming interface checks and explicit outgoing source/interface selection constrain replies to the chosen adapter. Initial replies use RFC 2131 broadcast fallback; renewals may use unicast. Client ID, hostname/FQDN, incoming overload and concatenated options are supported.
+
+Not included: DHCPv6, DHCP relay, BOOTP, reservation management, DNS, NAT, routing, TFTP or HTTP services. Boot options advertise values without hosting files.
+
+## Build and validation
+
+Use Windows x64, PowerShell 7 and .NET SDK 10.0.403 or its configured compatible patch:
 
 ```powershell
 .\scripts\Build.ps1
 ```
 
-Das Skript nutzt `.tools/dotnet/dotnet.exe`, wenn vorhanden, sonst das installierte SDK. Es führt Kerntests aus, veröffentlicht die EXE und prüft den nativen UDP-Sendepfad ausschließlich auf Loopback mit temporären Ports. Es startet keinen DHCP-Server im produktiven LAN.
+The script uses `.tools/dotnet/dotnet.exe` if present, otherwise the installed SDK. It runs core tests, publishes `dist/KubDHCP.exe`, tests native loopback transport, the real WinUI window, the published TUI and direct PowerShell/ConPTY operation in **German and English**. It starts no DHCP server on the production LAN. Microsoft Windows SDK/WinRT assemblies may emit generic IL2104 trimming warnings.
 
-Zur Größenreduktion: direkter Verweis auf `Microsoft.WindowsAppSDK.WinUI` 2.6.5 anstelle des SDK-Metapakets, vollständiges Managed-Trimming, komprimierte Einzeldatei, keine ReadyToRun-Duplikate und keine zusätzlichen UI-/MVVM-Pakete. Die nativen WinUI-Module bleiben erhalten, soweit das offizielle Komponentenpaket sie als Abhängigkeiten benötigt. Der Compiler meldet bekannte generische ABI-/Reflection-Trimmanalysen in den Microsoft-WinRT-Projektionen; eigene JSON-Persistenz verwendet Source Generation. Die veröffentlichte getrimmte EXE wird separat gestartet und ihr Optionsdialog geprüft.
-
-## Validierungsstand
-
-- 33 automatisierte Kerntests: Paket-/TLV-Prüfung, Optionen einschließlich 119/121/3396, Poolgrenzen, Nebenläufigkeit, Ablauf, Renew, Release, Decline, Neustart und beschädigte Persistenz.
-- Nativer Windows-Loopbacktest von `WSASendMsg`/`IP_PKTINFO` mit Prüfung des Empfangsinterfaces und vollständigem DISCOVER/OFFER/REQUEST/ACK-Ablauf samt Lease-Persistenz, auch aus der veröffentlichten Einzel-EXE.
-- Native Oberfläche und Optionsdialog der getrimmten Einzel-EXE gestartet; Vorbelegung anhand der tatsächlichen LAN-Karte sowie Hinzufügen und Speichern einer Option geprüft.
-- **Noch offen:** DHCP-Vergabe an reale neue Geräte und Paketmitschnitt im isolierten Netz mit zwei aktiven LAN-Karten. Diese Hardwareprüfung kann durch die lokalen Tests nicht ersetzt werden.
-
-Quellen und RFC-Verweise stehen im [Umsetzungsplan](docs/Umsetzungsplan.md). Der Plan dokumentiert den ursprünglichen Entwurf; dieses README beschreibt den tatsächlich implementierten Stand.
-
-## Bedienung ab v1.0.2
-
-Zusatzoptionen mit ihren Werten stehen direkt unter den Lease-Einstellungen. Die Anzahl aktiver Leases steht rechts über der Tabelle, die Version rechts darunter. Ein Rechtsklick auf einen Tabellenwert kopiert genau diesen Wert in die Zwischenablage.
-
-Mit **Bereich speichern** wird die gesamte aktuelle Konfiguration einschließlich Netzwerkschnittstelle, Lease-Dauer und Zusatzoptionen unter einem Namen gespeichert. Vorhandene Namen werden aktualisiert. Das Dropdown **Gespeicherte Bereiche** lädt die Konfiguration bei gestopptem Server; die zugehörige Schnittstelle muss mit passender IPv4-Konfiguration verfügbar sein. Die Bereiche liegen portabel in `KubDHCP.data/ranges.json`.
-
-**Lease Reset** löscht bei gestopptem Server alle gespeicherten Leases. Die Windows-IP-Konfiguration der Clients wird dadurch nicht sofort verändert; Clients behalten ihre Adresse bis zur Erneuerung oder zum Ablauf. Die Bereichsvorlagen bleiben erhalten.
-
-Die Startgröße berücksichtigt die Windows-DPI-Skalierung. Bei kleinerer verfügbarer Bildschirmfläche startet das Fenster maximiert. Für umfangreiche Optionslisten bleibt die Oberfläche scrollbar.
-
-Die Version wird einmal pro Änderungsiteration mit `scripts/Bump-Version.ps1` erhöht, nicht pro Testbuild. Auf `1.0.100` folgt `1.1.0`. `-Preview` zeigt die nächste Version ohne Änderung an.
-
-## Bedienung ab v1.0.3
-
-**Netzwerkeinstellungen** direkt hinter der Schnittstellenauswahl öffnet die Windows-Eigenschaften genau des gewählten Adapters. Dort können unter TCP/IPv4 Adresse, Maske, Gateway und DNS geändert werden. Beim Zurückkehren werden die Schnittstellen neu eingelesen; bei geänderter Adapteradresse werden passende DHCP-Vorgaben vorbelegt. Der Server muss dafür gestoppt sein.
-
-Zusatzoptionen können direkt in der Hauptansicht bearbeitet werden. Gültige Werte werden beim Verlassen des Feldes gespeichert; ungültige Werte werden am Feld markiert und verhindern das Starten und Speichern eines Bereichs. **Entfernen** löscht die gesamte Option aus der aktuellen Konfiguration. Bereits gespeicherte Bereichsvorlagen werden erst durch erneutes Speichern unter ihrem Namen aktualisiert. Bei laufendem Server sind Bearbeiten und Entfernen gesperrt.
-
-Das Programm startet maximiert, damit die zusätzlichen Eingabefelder, Leasetabelle und Versionsanzeige möglichst vollständig sichtbar sind. Umfangreiche Listen bleiben scrollbar.
-
-## Oberfläche ab v1.0.4
-
-Bereich speichern, Netzwerkeinstellungen und Option entfernen verwenden Symbolbuttons (Speichern, Zahnrad, X) mit Tooltips und zugänglichen Beschriftungen. Die native Titelleiste einschließlich Fensterbuttons passt sich dem aktuellen Hell-/Dunkelmodus an; Theme-Wechsel werden während der Laufzeit übernommen.
-
-## Startkorrektur v1.0.5
-
-Die portable EXE muss **KubDHCP.exe** heißen. Das Umbenennen in `KubDHCP-v1.0.4.exe` hat die WinUI-Ressourcenauflösung beim Fensterstart beschädigt. Versionierte Veröffentlichungen verwenden daher einen Ordner wie `v1.0.5/KubDHCP.exe`. Falls die bisherige EXE läuft, legt der Build die neue Version unter diesem Ordner ab. Ein erneuter Build prüft nun neben dem Netzwerktransport auch das tatsächliche Laden des WinUI-Fensters (`--startup-test`). Einstellungen und Leases bleiben unverändert im jeweiligen `KubDHCP.data`-Ordner.
-
-## Bereiche und Netzwerk-Monitor ab v1.0.6
-
-Das **X neben dem Speichern-Symbol** entfernt den im Dropdown ausgewählten gespeicherten Bereich. Aktuelle Formularwerte und Leases bleiben erhalten.
-
-**Monitor** rechts neben **Lease Reset** schaltet eine rechte Terminalspalte über die gesamte Höhe von Konfiguration und Leasetabelle ein oder vollständig aus. Bei normaler Fenstergröße wird das Fenster für den Monitor verbreitert und beim Ausblenden wieder zurückgesetzt. Die Ausgabe zeigt Zeitstempel, empfangene DHCP-Pakete, Client-MAC, Transaktionskennung, angefragte Optionen und deren Werte, Antworten einschließlich Ziel, Broadcast/Unicast und tatsächlich gesendeter Optionen, ARP-Belegungsprüfungen, Gründe für ausbleibende Antworten sowie Fehler und Start/Stopp-Ereignisse. Erfasst wird die vom DHCP-Server selbst empfangene und gesendete Kommunikation sowie seine ARP-Prüfungen.
-
-Die Anzeige folgt neuen Einträgen automatisch, solange man am Ende steht. Hochscrollen ermöglicht das Nachlesen; am unteren Ende wird die Live-Ansicht fortgesetzt. Bis zu 2.000 Meldungen bleiben im laufenden Programm erhalten, auch während die Spalte ausgeblendet ist. Bei Überlast werden ausgelassene Meldungen kenntlich gemacht.
-
-Das Programm startet wieder als normales, zentriertes Fenster innerhalb der verfügbaren Arbeitsfläche, unter Berücksichtigung der Windows-Skalierung. Auf kleinen Bildschirmen bleiben umfangreiche Formularinhalte scrollbar. Der automatische WinUI-Starttest prüft auch Ein-/Ausblenden und die Monitoranzeige einer echten DISCOVER/OFFER/REQUEST/ACK-Folge über isolierte Loopback-Ports.
-
-## Monitorbedienung ab v1.0.7
-
-Die Trennleiste links vom Terminal lässt sich ziehen, um dessen Breite anzupassen. Titel, Status, Hinweise und Ausgabe verwenden Consolas als Monospace-Schrift; Statussymbole verwenden die Windows-Symbolschrift.
-
-Beim Hochscrollen wechselt die Anzeige rechts im Monitorkopf auf ein rotes Pause-Symbol und blinkendes **PAUSE**. Neue Meldungen werden währenddessen gepuffert. Am Ende der Ausgabe erscheinen ein grünes Play-Symbol und **Live**, und gepufferte Meldungen werden nachgeliefert. Die bestehenden Puffergrenzen gelten weiterhin.
-
-Das Ein-/Ausblenden verändert die Fensterposition nicht mehr. Bei Bedarf wird das Fenster nur nach rechts verbreitert; beim Ausschalten wird ausschließlich die zusätzlich angefügte Breite abgezogen. Zwischenzeitliches Verschieben und Änderungen der Fensterhöhe bleiben erhalten.
-
-## Lease-Tabelle und Monitorsteuerung ab v1.0.8
-
-**Live/PAUSE** im Monitorkopf ist anklickbar: Live pausiert die Ausgabe, PAUSE setzt sie fort und zeigt neue Meldungen wieder an. Eine ausdrücklich angeklickte Pause bleibt auch beim Scrollen bestehen, bis sie per Klick aufgehoben wird. Die automatische Lesepause durch Hochscrollen wird weiterhin am Ende der Ausgabe beendet.
-
-**Lease Reset** steht rechts über der Leasetabelle, direkt hinter der Anzahl aktiver Leases. Das X hinter jedem Lease-Balken entfernt ausschließlich diesen Eintrag, auch bei laufendem Server. Der laufende Server aktualisiert seinen Lease-Speicher unter derselben Sperre wie die Paketverarbeitung. Falls der Eintrag inzwischen erneuert wurde, wird die Tabelle aktualisiert und der neuere Lease bleibt bestehen. Das Löschen sendet keinen Widerruf an den Client; dessen lokale IP-Konfiguration wird dadurch nicht sofort verändert.
-
-Die neue, ebenfalls verstellbare und per Rechtsklick kopierbare Spalte **Hostname** übernimmt den vom Client gelieferten DHCP-Namen (Option 12) oder FQDN (Option 81). Ein bereits während DISCOVER gemeldeter Name wird bei der Bestätigung übernommen und bei Erneuerungen ohne erneute Namensangabe beibehalten. Bestehende Lease-Dateien bleiben lesbar; fehlt die Namensangabe, zeigt die Tabelle „—“. Namen erscheinen bei bestehenden Clients, sobald sie durch eine neue DHCP-Anfrage bekannt werden.
-
-## Symbolbuttons und Client-ID ab v1.0.9
-
-Der Serverbutton zeigt ausschließlich ein Play-Symbol bei gestopptem Server und ein Stopp-Symbol bei laufendem Server. Der Monitorbutton verwendet ein Terminalfenster-Symbol. Die Tooltips und zugänglichen Beschriftungen benennen die jeweilige Aktion.
-
-Die neue Spalte **Client-ID** steht hinter der MAC-Adresse. Sie zeigt die vollständig übermittelte DHCP-Client-ID (Option 61) als Hexwert einschließlich Typbyte. Ohne übermittelte Client-ID steht dort „—“; eine nur intern aus der MAC-Adresse abgeleitete Kennung wird nicht als Client-ID ausgegeben. Vorhandene gespeicherte IDs werden direkt aus den bestehenden Lease-Daten gelesen. Die Spalte ist verstellbar und ihr Wert per Rechtsklick kopierbar.
-
-## Einheitliche Symbolbuttons ab v1.0.10
-
-Die Symbolbuttons sind einheitlich 40 × 32 XAML-Pixel groß und verwenden 16-Punkt-Symbole. Die Buttons im Konfigurationsbereich stehen mit 8 Pixeln Abstand in zwei bündigen Spalten: Play/Stopp über Speichern und Zahnrad, Monitor über Bereich entfernen und Aktualisieren. Die Entfernen-Symbole für Zusatzoptionen und einzelne Leases verwenden dieselbe Buttongröße.
-Die Überschrift der Leasetabelle lautet ab v1.0.10 kurz „Leases“.
-
-## TUI ab v1.0.11
-
-Dieselbe portable EXE bietet zusätzlich eine Terminaloberfläche:
-
-```powershell
-.\KubDHCP.exe --tui
-```
-
-Ohne Parameter startet weiterhin WinUI 3. Ab v1.0.12 läuft die TUI ausschließlich in der aufrufenden PowerShell-/Terminalsitzung und öffnet kein eigenes Fenster. Sie übernimmt die Anordnung der Konfiguration, Symbolbuttons, Zusatzoptionen, Leasetabelle und des seitlichen Netzwerkmonitors in einem Zeichenraster. Kleine Fenster erlauben Scrollen und passen die Formularspalten an.
-
-- **Tab / Shift+Tab:** zwischen Eingabefeldern und Aktionen wechseln; **Enter / Leertaste:** die gewählte Aktion ausführen.
-- Alle Buttons und Auswahllisten sind mit der **Maus** bedienbar. Eingabefelder unterstützen **Strg+A/C/V**.
-- **Rechtsklick auf einen Tabellenwert:** genau diesen Wert kopieren. Spaltenbreiten und Monitorbreite lassen sich durch Ziehen ändern.
-- **Mausrad:** Formular, Tabelle und Monitor scrollen. Hochscrollen im Monitor pausiert die Ausgabe; **Live/PAUSE** ist anklickbar.
-- Zusatzoptionen lassen sich direkt bearbeiten und entfernen. Ein Klick auf ihren Titel öffnet den vollständigen Optionseditor einschließlich Format und Versandregeln.
-- **F1:** Bedienhilfe; **F10 / Strg+Q:** beenden und Server stoppen; **Escape:** Dialog schließen.
-
-Bereiche, Einstellungen und Leases verwenden denselben Datenordner und dieselbe DHCP-Implementierung wie WinUI. Pro EXE-Pfad kann nur eine Instanz laufen, unabhängig von der gewählten Oberfläche. Das Zahnrad öffnet in der TUI einen Terminaldialog für IPv4, Subnetzmaske, Gateway, DNS und DHCP. Übernehmen benötigt Administratorrechte in der aktuellen Sitzung; es wird kein UAC-Fenster gestartet. Änderungen am Verbindungsadapter können eine SSH-Sitzung unterbrechen. Die WinUI-Adaptereigenschaften bleiben unverändert.
-
-Der Build prüft zusätzlich die veröffentlichte TUI: Layout, Tab-Navigation, Mausaktionen, persistente Bereiche und Formularwerte, Optionsbearbeitung, Lease-Löschung, Monitorsteuerung sowie native Unicode-Konsolenausgabe und Eingabeereignisse. Der DHCP-Ablauf wird dafür ausschließlich über isolierte Loopback-Ports ausgeführt. Der aktuelle Stand umfasst 59 bestandene Kerntests sowie bestandene WinUI-, Transport- und TUI-Prüfungen.
-
-## PowerShell und SSH ab v1.0.12
-
-`.\KubDHCP.exe --tui` läuft im vorhandenen Terminal. PowerShell wartet bis zum Beenden; danach werden der vorherige Bildschirm, die Eingabemodi und der Cursor wiederhergestellt. Terminalgröße, Schrift und Farbpalette der Sitzung werden nicht verändert. Ohne interaktives Terminal meldet die Anwendung einen Fehler und öffnet kein Ersatzfenster.
-
-Für eine interaktive SSH-Verbindung zu einem Windows-Rechner ein Terminal anfordern, beispielsweise `ssh -t benutzer@rechner`, dann dort `& 'C:\Tools\KubDHCP\KubDHCP.exe' --tui` ausführen. Erforderlich ist ein SSH-Server mit Windows-Pseudokonsolenunterstützung und ein Terminal mit VT-Unterstützung. Tastatur, Terminalgrößenänderungen und SGR-Mausereignisse werden verarbeitet. Bei aktivierter Mausweitergabe bedient ein Klick die TUI; die lokale Terminalauswahl ist üblicherweise mit Shift erreichbar. Die Firewall-/Netzwerkrechte gelten auf dem entfernten Windows-Rechner.
-
-Einfügen über die Einfügefunktion des lokalen Terminals überträgt den Text auch per SSH. Kopieren per Rechtsklick verwendet in SSH-Sitzungen OSC 52 für die lokale Zwischenablage; das verwendete Terminal muss dies erlauben. Es wird nicht in die Desktop-Zwischenablage des entfernten Servers geschrieben.
-
-Der Start verwendet das Konsolensubsystem, damit PowerShell die TUI als Vordergrundanwendung behandelt. Das Manifest verhindert unter Windows 11 24H2 / Server 2025 und neuer eine Konsole beim grafischen Start. Auf älteren Windows-Versionen wird die automatisch zugewiesene Konsole vor dem WinUI-Start abgetrennt; dort kann beim grafischen Start kurz eine Konsole erscheinen. Layout und Bedienung der WinUI-3-Oberfläche wurden nicht geändert.
-
-Der zusätzliche Buildtest startet die ausgelieferte EXE direkt innerhalb von PowerShell in einer echten ConPTY-Sitzung und prüft Ausgabe, Maus, Tastatur, Größenänderung, Warten der Shell sowie deren Rückkehr nach dem Beenden. Eine echte SSH-Verbindung wurde lokal nicht geprüft.
-
-## TUI-Navigation ab v1.0.13
-
-Die Pfeiltasten wählen das nächste bedienbare Element in der jeweiligen Richtung. Ein ausgewähltes Eingabefeld nimmt erst nach **Enter** Text an; ein Klick wählt es ebenfalls zunächst nur aus. Der Eingabemodus zeigt einen Cursor und den Hinweis **EINGABE** am unteren Rand. Während der Eingabe bewegen die Pfeile den Textcursor. **Enter** übernimmt die Eingabe und kehrt zur Navigation zurück, **Escape** verwirft die Änderungen dieser Eingabe. Mehrzeilige Felder übernehmen mit **Strg+Enter**, während Enter dort einen Zeilenumbruch einfügt.
-
-Buttons und Dropdowns werden weiterhin mit Enter oder per Maus betätigt. In geöffneten Auswahllisten wählen Hoch/Runter den Eintrag. Tabelle und Monitor lassen sich mit Enter für ihre interne Tastaturbedienung aktivieren und mit Escape wieder verlassen. Tab/Shift+Tab bleiben als zusätzliche Bedienmöglichkeit erhalten. Die WinUI-Oberfläche ist unverändert.
+Use `scripts/Bump-Version.ps1` once per requested change iteration. After patch 100, the minor version advances and patch resets to zero. The app project is the single version source for both interfaces and the EXE. Third-party notices and offline data sources are included in the source. Real hardware DHCP and actual remote SSH connections require separate environment-specific verification.

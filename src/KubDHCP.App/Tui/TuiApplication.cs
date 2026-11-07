@@ -23,7 +23,7 @@ internal sealed class TuiApplication : IDisposable
     private readonly AdapterInfo[]? testAdapters;
     private AdapterInfo? adapter;
     private string? selectedRange, startupError, pendingStatus, pendingFailure;
-    internal string Status = "Bereit";
+    internal string Status = Localizer.Text("Bereit");
     private bool error, dirty, exit, monitorVisible, following = true, manualPause;
     private int unit = 2, mainOffset, mainHeight, mainWidth, monitorWidth = 48, monitorOffset, monitorLines;
     private int leaseOffset, leaseHorizontal, selectedLease, selectedColumn, queued, dropped, leaseDirty;
@@ -43,7 +43,7 @@ internal sealed class TuiApplication : IDisposable
     }
     public TuiApplication(ConsoleTerminal? terminal, DataStore? store = null, AdapterInfo[]? testAdapters = null)
     {
-        this.terminal = terminal; this.testAdapters = testAdapters; Store = store ?? OpenStore(); server = new(Store);
+        this.terminal = terminal; this.testAdapters = testAdapters ?? (Program.DemoMode ? [DemoData.Adapter] : null); Store = store ?? OpenStore(); server = new(Store);
         server.Status += text => Volatile.Write(ref pendingStatus, text);
         server.NetworkActivity += QueueNetwork;
         server.LeasesChanged += () => Interlocked.Exchange(ref leaseDirty, 1);
@@ -52,20 +52,12 @@ internal sealed class TuiApplication : IDisposable
         try { saved = Store.LoadConfiguration(); Store.LoadLeases(); }
         catch (Exception ex) when (IsDataError(ex)) { startupError = ex.Message; Notify(ex.Message, true); }
         RefreshAdapters(saved?.AdapterId, saved); RefreshRanges();
-        QueueNetwork("Monitor bereit · DHCP/ARP-Kommunikation dieses Servers. Server gestoppt.");
+        QueueNetwork(Localizer.Text("Monitor bereit · DHCP/ARP-Kommunikation dieses Servers. Server gestoppt."));
+        if (Program.DemoMode) { monitorVisible = false; Status = "DEMO · Synthetic data · Server start disabled"; foreach (var line in DemoData.MonitorExamples) QueueNetwork(line); }
         using var notices = typeof(TuiApplication).Assembly.GetManifestResourceStream("KubDHCP.App.ThirdPartyNotices.txt");
         if (notices is not null) { using var reader = new StreamReader(notices); try { File.WriteAllText(Path.Combine(Store.DirectoryPath, "Lizenzen.txt"), reader.ReadToEnd()); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
     }
-    private static DataStore OpenStore()
-    {
-        try
-        {
-            var store = new DataStore(Path.Combine(Path.GetDirectoryName(Environment.ProcessPath!)!, "KubDHCP.data"));
-            var check = Path.Combine(store.DirectoryPath, ".tui-write-check"); File.WriteAllText(check, ""); File.Delete(check); return store;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        { return new DataStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "KubDHCP")); }
-    }
+    private static DataStore OpenStore() => Program.DemoMode ? DemoData.Create() : UserData.Open();
     public static int Run()
     {
         using var terminal = new ConsoleTerminal(); using var app = new TuiApplication(terminal);
@@ -85,7 +77,7 @@ internal sealed class TuiApplication : IDisposable
         canvas.Box(new(1, 1, size.Width - 2, size.Height - 2), "KubDHCP · TUI", TuiCanvas.Red);
         var lines = TuiCanvas.Wrap(message, size.Width - 6);
         for (var i = 0; i < Math.Min(lines.Count, size.Height - 7); i++) canvas.Text(3, i + 3, lines[i], size.Width - 6, TuiCanvas.Red);
-        canvas.Text(3, size.Height - 4, "Beliebige Taste zum Schließen.", size.Width - 6); terminal.Present(canvas);
+        canvas.Text(3, size.Height - 4, Localizer.Text("Beliebige Taste zum Schließen."), size.Width - 6); terminal.Present(canvas);
         while (!terminal.QuitRequested) if (terminal.Read().Any(i => !i.Mouse && i.Key != 0)) break;
         return 1;
     }
@@ -97,7 +89,7 @@ internal sealed class TuiApplication : IDisposable
         if (Interlocked.Exchange(ref leaseDirty, 0) != 0) ReloadLeases();
         if (!following && monitorVisible) return;
         var lost = Interlocked.Exchange(ref dropped, 0);
-        if (lost > 0) history.Add($"[{DateTime.Now:HH:mm:ss.fff}] MONITOR · {lost} Meldungen bei hoher Last ausgelassen.");
+        if (lost > 0) history.Add((Localizer.IsGerman ? $"[{DateTime.Now:HH:mm:ss.fff}] MONITOR · {lost} Meldungen bei hoher Last ausgelassen." : $"[{DateTime.Now:HH:mm:ss.fff}] MONITOR · {lost} messages dropped under high load."));
         for (var i = 0; i < 250 && network.TryDequeue(out var line); i++) { Interlocked.Decrement(ref queued); history.Add(line); }
         if (history.Count > 2000) history.RemoveRange(0, history.Count - 2000);
     }
@@ -116,13 +108,13 @@ internal sealed class TuiApplication : IDisposable
             ?? adapters.FirstOrDefault(a => a.Id == preferred) ?? adapters.FirstOrDefault();
         if (adapter is not null)
             Apply(saved is not null && adapter.Id == saved.AdapterId && adapter.Address == saved.ServerAddress && adapter.Mask == saved.Mask ? saved : ServerConfiguration.ForAdapter(adapter) with { Options = options.ToList() });
-        else Notify("Keine aktive IPv4-LAN-Karte. Netzwerk verbinden und aktualisieren.", true);
+        else Notify(Localizer.Text("Keine aktive IPv4-LAN-Karte. Netzwerk verbinden und aktualisieren."), true);
         ReloadLeases();
     }
     private void RefreshRanges()
     {
         try { ranges = Store.LoadRanges(); }
-        catch (Exception ex) when (IsDataError(ex)) { Notify("Bereiche: " + ex.Message, true); }
+        catch (Exception ex) when (IsDataError(ex)) { Notify(Localizer.Text("Bereiche: ") + ex.Message, true); }
     }
     private void Apply(ServerConfiguration c)
     {
@@ -134,10 +126,10 @@ internal sealed class TuiApplication : IDisposable
     }
     private ServerConfiguration ReadConfiguration()
     {
-        if (adapter is null) throw new ArgumentException("Bitte eine LAN-Karte auswählen.");
-        if (!ulong.TryParse(Field("duration").Text, out var value) || value == 0 || value > uint.MaxValue) throw new ArgumentException("Lease-Dauer muss eine positive ganze Zahl sein.");
+        if (adapter is null) throw new ArgumentException(Localizer.Text("Bitte eine LAN-Karte auswählen."));
+        if (!ulong.TryParse(Field("duration").Text, out var value) || value == 0 || value > uint.MaxValue) throw new ArgumentException(Localizer.Text("Lease-Dauer muss eine positive ganze Zahl sein."));
         var seconds = value * new uint[] { 1, 60, 3600, 86400 }[unit];
-        if (seconds > 4294967294) throw new ArgumentException("Lease-Dauer ist zu groß.");
+        if (seconds > 4294967294) throw new ArgumentException(Localizer.Text("Lease-Dauer ist zu groß."));
         foreach (var option in options) OptionCodec.Encode(option);
         return new() { AdapterId = adapter.Id, ServerAddress = adapter.Address, StartAddress = Field("start").Text.Trim(), EndAddress = Field("end").Text.Trim(), Mask = Field("mask").Text.Trim(),
             Gateway = Field("gateway").Text.Trim(), PrimaryDns = Field("dns1").Text.Trim(), SecondaryDns = Field("dns2").Text.Trim(), LeaseSeconds = (uint)seconds, Options = options.ToList() };
@@ -151,7 +143,8 @@ internal sealed class TuiApplication : IDisposable
     }
     private void ToggleServer()
     {
-        if (server.IsRunning) { server.StopAsync().GetAwaiter().GetResult(); Notify("Server gestoppt. Bereits vergebene Leases bleiben bis zum Ablauf gültig."); }
+        if (Program.DemoMode) return;
+        if (server.IsRunning) { server.StopAsync().GetAwaiter().GetResult(); Notify(Localizer.Text("Server gestoppt. Bereits vergebene Leases bleiben bis zum Ablauf gültig.")); }
         else
         {
             if (startupError is not null) throw new InvalidOperationException(startupError);
@@ -167,27 +160,27 @@ internal sealed class TuiApplication : IDisposable
     }
     internal void DeleteLease(LeaseRecord lease)
     {
-        var removed = server.RemoveLease(lease); ReloadLeases(); Notify(removed ? $"Lease {lease.Address} · {lease.Mac} gelöscht." : "Lease inzwischen geändert. Tabelle wurde aktualisiert.");
+        var removed = server.RemoveLease(lease); ReloadLeases(); Notify(removed ? (Localizer.IsGerman ? $"Lease {lease.Address} · {lease.Mac} gelöscht." : $"Lease {lease.Address} · {lease.Mac} deleted.") : Localizer.Text("Lease inzwischen geändert. Tabelle wurde aktualisiert."));
     }
     private void ResetLeases()
     {
         if (server.IsRunning) return; Store.SaveLeases([]); Store.LoadConfiguration(); startupError = null; ReloadLeases();
-        Notify("Leases gelöscht. Clients behalten ihre lokale Adresse bis zur Erneuerung oder zum Ablauf.");
+        Notify(Localizer.Text("Leases gelöscht. Clients behalten ihre lokale Adresse bis zur Erneuerung oder zum Ablauf."));
     }
     private void LoadRange(SavedRange range)
     {
         var c = range.Configuration; var match = adapters.FirstOrDefault(a => a.Id == c.AdapterId && a.Address == c.ServerAddress && a.Mask == c.Mask);
-        if (match is null) throw new ArgumentException("Netzwerkschnittstelle dieses Bereichs ist nicht verfügbar oder wurde umkonfiguriert.");
-        c.Validate(match); adapter = match; Apply(c); Store.SaveConfiguration(c); selectedRange = range.Name; ReloadLeases(); Notify($"Bereich „{range.Name}“ geladen.");
+        if (match is null) throw new ArgumentException(Localizer.Text("Netzwerkschnittstelle dieses Bereichs ist nicht verfügbar oder wurde umkonfiguriert."));
+        c.Validate(match); adapter = match; Apply(c); Store.SaveConfiguration(c); selectedRange = range.Name; ReloadLeases(); Notify((Localizer.IsGerman ? $"Bereich „{range.Name}“ geladen." : $"Range “{range.Name}” loaded."));
     }
     private void RemoveRange()
     {
-        if (selectedRange is null) return; Store.RemoveRange(selectedRange); RefreshRanges(); Notify($"Bereich „{selectedRange}“ entfernt; aktuelle Einstellungen bleiben erhalten."); selectedRange = null;
+        if (selectedRange is null) return; Store.RemoveRange(selectedRange); RefreshRanges(); Notify((Localizer.IsGerman ? $"Bereich „{selectedRange}“ entfernt; aktuelle Einstellungen bleiben erhalten." : $"Range “{selectedRange}” removed; current settings are retained.")); selectedRange = null;
     }
     private void AdapterSettings()
     {
         if (adapter is null || server.IsRunning) return;
-        Push(new("Netzwerkeinstellungen · " + adapter.Name) { Kind = "adapter", Address = new(adapter.Address), Mask = new(adapter.Mask), Gateway = new(adapter.Gateway ?? ""), Dns = new(string.Join(", ", adapter.Dns)), Dhcp = adapter.DhcpEnabled });
+        Push(new(Localizer.Text("Netzwerkeinstellungen · ") + adapter.Name) { Kind = "adapter", Address = new(adapter.Address), Mask = new(adapter.Mask), Gateway = new(adapter.Gateway ?? ""), Dns = new(string.Join(", ", adapter.Dns)), Dhcp = adapter.DhcpEnabled });
     }
     private void SaveAdapter(Popup popup)
     {
@@ -196,7 +189,7 @@ internal sealed class TuiApplication : IDisposable
         var dns = popup.Dns.Text.Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (!popup.Dhcp)
         {
-            Ipv4.Parse(address); if (!Ipv4.IsMask(Ipv4.Parse(mask))) throw new ArgumentException("Ungültige Subnetzmaske.");
+            Ipv4.Parse(address); if (!Ipv4.IsMask(Ipv4.Parse(mask))) throw new ArgumentException(Localizer.Text("Ungültige Subnetzmaske."));
             if (gateway.Length > 0) Ipv4.Parse(gateway);
         }
         foreach (var ip in dns) Ipv4.Parse(ip);
@@ -207,7 +200,7 @@ internal sealed class TuiApplication : IDisposable
             foreach (var argument in arguments) start.ArgumentList.Add(argument);
             using var process = System.Diagnostics.Process.Start(start)!;
             var output = process.StandardOutput.ReadToEndAsync(); var error = process.StandardError.ReadToEndAsync();
-            if (!process.WaitForExit(15000)) { process.Kill(); throw new IOException("Netzwerkeinstellungen: Zeitüberschreitung. Adapterzustand prüfen."); }
+            if (!process.WaitForExit(15000)) { process.Kill(); throw new IOException(Localizer.Text("Netzwerkeinstellungen: Zeitüberschreitung. Adapterzustand prüfen.")); }
             if (process.ExitCode != 0) throw new IOException((output.GetAwaiter().GetResult() + error.GetAwaiter().GetResult()).Trim());
         }
         if (popup.Dhcp) Netsh("interface", "ipv4", "set", "address", "name=" + index, "source=dhcp");
@@ -218,7 +211,7 @@ internal sealed class TuiApplication : IDisposable
             Netsh("interface", "ipv4", "set", "dnsservers", "name=" + index, "source=static", "address=" + dns[0], "validate=no");
             for (var i = 1; i < dns.Length; i++) Netsh("interface", "ipv4", "add", "dnsservers", "name=" + index, "address=" + dns[i], "index=" + (i + 1).ToString(CultureInfo.InvariantCulture), "validate=no");
         }
-        var id = adapter.Id; ClosePopup(); RefreshAdapters(id); Notify("Adaptereinstellungen übernommen.");
+        var id = adapter.Id; ClosePopup(); RefreshAdapters(id); Notify(Localizer.Text("Adaptereinstellungen übernommen."));
     }
     internal void ToggleMonitor() { monitorVisible = !monitorVisible; following = true; manualPause = false; }
     internal void TogglePlayback()
@@ -242,7 +235,7 @@ internal sealed class TuiApplication : IDisposable
         var footer = TuiCanvas.Wrap(Status, Math.Max(1, width - 14));
         Surface.Canvas.Fill(new(0, height - 3, width, 3)); Surface.Label(1, height - 3, footer.FirstOrDefault() ?? "", width - 15, error ? TuiCanvas.Red : TuiCanvas.Normal);
         var version = typeof(TuiApplication).Assembly.GetName().Version!; Surface.Label(width - 13, height - 3, $"v{version.Major}.{version.Minor}.{version.Build}", 12, TuiCanvas.Muted);
-        Surface.Label(1, height - 1, Surface.Editing ? "EINGABE · Enter: übernehmen · Esc: verwerfen · Mehrzeilig: Ctrl+Enter übernimmt" : "Pfeile: Auswahl · Enter: Eingabe/Aktion · Esc: zurück · F1: Hilfe · F10/Ctrl+Q: Ende", width - 2, TuiCanvas.Muted);
+        Surface.Label(1, height - 1, Surface.Editing ? Localizer.Text("EINGABE · Enter: übernehmen · Esc: verwerfen · Mehrzeilig: Ctrl+Enter übernimmt") : Localizer.Text("Pfeile: Auswahl · Enter: Eingabe/Aktion · Esc: zurück · F1: Hilfe · F10/Ctrl+Q: Ende"), width - 2, TuiCanvas.Muted);
         if (popups.TryPeek(out var popup)) DrawPopup(popup);
         Surface.EnsureFocus(); return Surface.Canvas;
     }
@@ -253,32 +246,32 @@ internal sealed class TuiApplication : IDisposable
         var leaseY = 15 + (int)Math.Ceiling(6d / countColumns) * 5;
         var optionsY = leaseY + 5 + (countColumns == 1 ? 3 : 0); var cardBottom = optionsY + options.Count * 5 + 1;
         Surface.Box(1, 1, mainWidth - 2, cardBottom + 1, color: TuiCanvas.Card);
-        Surface.Label(3, 3, "DHCP-Konfiguration", Math.Max(1, mainWidth - 40), TuiCanvas.Card);
-        Surface.Label(right - 25, 3, server.IsRunning ? "● Läuft" : "● Gestoppt", 12, server.IsRunning ? (ushort)0x8A : (ushort)0x8C);
-        Surface.Button("server", right - 12, 2, 5, server.IsRunning ? "■" : "▶", ToggleServer, adapter is not null && (server.IsRunning || startupError is null), true);
+        Surface.Label(3, 3, Localizer.Text("DHCP-Konfiguration"), Math.Max(1, mainWidth - 40), TuiCanvas.Card);
+        Surface.Label(right - 25, 3, server.IsRunning ? Localizer.Text("● Läuft") : Localizer.Text("● Gestoppt"), 12, server.IsRunning ? (ushort)0x8A : (ushort)0x8C);
+        Surface.Button("server", right - 12, 2, 5, server.IsRunning ? "■" : "▶", ToggleServer, !Program.DemoMode && adapter is not null && (server.IsRunning || startupError is null), true);
         Surface.Button("monitor", right - 5, 2, 5, ">_", ToggleMonitor, accent: monitorVisible);
-        Surface.Label(3, 6, "Gespeicherte Bereiche", color: TuiCanvas.Card);
-        Surface.Choice("ranges", 3, 7, usable - 14, selectedRange ?? "Gespeicherten Bereich laden", () => Pick("Bereich laden", ranges.Select(r => r.Name).ToArray(), i => LoadRange(ranges[i])), !server.IsRunning);
+        Surface.Label(3, 6, Localizer.Text("Gespeicherte Bereiche"), color: TuiCanvas.Card);
+        Surface.Choice("ranges", 3, 7, usable - 14, selectedRange ?? Localizer.Text("Gespeicherten Bereich laden"), () => Pick(Localizer.Text("Bereich laden"), ranges.Select(r => r.Name).ToArray(), i => LoadRange(ranges[i])), !server.IsRunning);
         Surface.Button("save-range", right - 12, 7, 5, "S", OpenSaveRange, adapter is not null); Surface.Button("remove-range", right - 5, 7, 5, "X", RemoveRange, selectedRange is not null);
-        Surface.Label(3, 10, "Netzwerkschnittstelle", color: TuiCanvas.Card);
-        Surface.Choice("adapters", 3, 11, usable - 14, adapter?.DisplayName ?? "Keine Schnittstelle", () => Pick("Netzwerkschnittstelle", adapters.Select(a => a.DisplayName).ToArray(), i => { adapter = adapters[i]; Apply(ServerConfiguration.ForAdapter(adapter) with { Options = options.ToList() }); selectedRange = null; ReloadLeases(); }), !server.IsRunning);
-        Surface.Button("adapter-settings", right - 12, 11, 5, "⚙", AdapterSettings, adapter is not null && !server.IsRunning);
+        Surface.Label(3, 10, Localizer.Text("Netzwerkschnittstelle"), color: TuiCanvas.Card);
+        Surface.Choice("adapters", 3, 11, usable - 14, adapter?.DisplayName ?? Localizer.Text("Keine Schnittstelle"), () => Pick(Localizer.Text("Netzwerkschnittstelle"), adapters.Select(a => a.DisplayName).ToArray(), i => { adapter = adapters[i]; Apply(ServerConfiguration.ForAdapter(adapter) with { Options = options.ToList() }); selectedRange = null; ReloadLeases(); }), !server.IsRunning);
+        Surface.Button("adapter-settings", right - 12, 11, 5, "⚙", AdapterSettings, !Program.DemoMode && adapter is not null && !server.IsRunning);
         Surface.Button("refresh", right - 5, 11, 5, "↻", () => { ServerConfiguration? draft = null; try { draft = ReadConfiguration(); } catch (ArgumentException) { } RefreshAdapters(adapter?.Id, draft); }, !server.IsRunning);
-        Surface.Label(3, 14, adapter is null ? "" : $"{adapter.Address} · {adapter.Mask} · {(adapter.DhcpEnabled ? "Adapteradresse per DHCP" : "Statische Adapteradresse")}", usable, TuiCanvas.Card);
-        var names = new[] { ("start", "Start-IP"), ("end", "Stop-IP"), ("mask", "Subnetzmaske"), ("gateway", "Gateway"), ("dns1", "Primärer DNS-Server"), ("dns2", "Sekundärer DNS-Server") };
+        Surface.Label(3, 14, adapter is null ? "" : $"{adapter.Address} · {adapter.Mask} · {(adapter.DhcpEnabled ? Localizer.Text("Adapteradresse per DHCP") : Localizer.Text("Statische Adapteradresse"))}", usable, TuiCanvas.Card);
+        var names = new[] { ("start", Localizer.Text("Start-IP")), ("end", Localizer.Text("Stop-IP")), ("mask", Localizer.Text("Subnetzmaske")), ("gateway", "Gateway"), ("dns1", Localizer.Text("Primärer DNS-Server")), ("dns2", Localizer.Text("Sekundärer DNS-Server")) };
         for (var i = 0; i < names.Length; i++)
         {
             var x = 3 + i % countColumns * (cellWidth + 2); var y = 15 + i / countColumns * 5;
             Surface.Label(x, y, names[i].Item2, cellWidth, TuiCanvas.Card); Surface.Field(names[i].Item1, x, y + 1, cellWidth, Field(names[i].Item1), !server.IsRunning);
         }
-        var half = Math.Max(8, (cellWidth - 1) / 2); Surface.Label(3, leaseY, "Lease-Dauer", color: TuiCanvas.Card);
+        var half = Math.Max(8, (cellWidth - 1) / 2); Surface.Label(3, leaseY, Localizer.Text("Lease-Dauer"), color: TuiCanvas.Card);
         Surface.Field("duration", 3, leaseY + 1, half, Field("duration", "1"), !server.IsRunning);
-        Surface.Choice("unit", 4 + half, leaseY + 1, Math.Max(8, cellWidth - half - 1), Units[unit], () => Pick("Lease-Einheit", Units, i => { unit = i; dirty = true; }), !server.IsRunning);
-        Surface.Button("add-option", countColumns > 1 ? 3 + cellWidth + 2 : 3, leaseY + (countColumns > 1 ? 1 : 4), 22, "+ Option hinzufügen", () => OpenOption(null), true);
+        Surface.Choice("unit", 4 + half, leaseY + 1, Math.Max(8, cellWidth - half - 1), Units[unit], () => Pick(Localizer.Text("Lease-Einheit"), Units, i => { unit = i; dirty = true; }), !server.IsRunning);
+        Surface.Button("add-option", countColumns > 1 ? 3 + cellWidth + 2 : 3, leaseY + (countColumns > 1 ? 1 : 4), 22, Localizer.Text("+ Option hinzufügen"), () => OpenOption(null), true);
         for (var i = 0; i < options.Count; i++)
         {
             var option = options[i]; var y = optionsY + i * 5;
-            var title = $"{option.Code} · {option.Name}" + (option.Enabled ? "" : " · deaktiviert");
+            var title = $"{option.Code} · {option.Name}" + (option.Enabled ? "" : Localizer.Text(" · deaktiviert"));
             var titleControl = Surface.Custom("edit-option:" + option.Code, Surface.Rect(3, y, usable - 7, 1)); titleControl.Activate = () => OpenOption(option);
             Surface.Label(3, y, title, usable - 7, Surface.FocusId == titleControl.Id ? TuiCanvas.Focus : TuiCanvas.Card);
             var field = Field("option:" + option.Code, option.Value); field.Multiline = false;
@@ -291,22 +284,22 @@ internal sealed class TuiApplication : IDisposable
         Surface.Label(1, cardBottom + 1, "└" + new string('─', Math.Max(0, mainWidth - 4)) + "┘", mainWidth - 2, TuiCanvas.Card);
         var listY = cardBottom + 2; Surface.Label(2, listY + 1, "Leases", color: TuiCanvas.White);
         var active = Leases.Count(l => l.State == "Active" && l.ExpiresUtc > DateTimeOffset.UtcNow);
-        var count = active == 1 ? "1 aktiver Lease" : $"{active} aktive Leases"; Surface.Label(Math.Max(9, right - count.Length - 17), listY + 1, count, count.Length);
-        Surface.Button("reset-leases", right - 14, listY, 14, "Lease Reset", ResetLeases, !server.IsRunning);
+        var count = active == 1 ? Localizer.Text("1 aktiver Lease") : (Localizer.IsGerman ? $"{active} aktive Leases" : $"{active} active leases"); Surface.Label(Math.Max(9, right - count.Length - 17), listY + 1, count, count.Length);
+        Surface.Button("reset-leases", right - 14, listY, 14, Localizer.Text("Lease Reset"), ResetLeases, !server.IsRunning);
         var tableY = listY + 4; var tableHeight = Math.Max(9, height - 4 - tableY); mainHeight = tableY + tableHeight;
         tableRect = Surface.Rect(1, tableY, mainWidth - 2, tableHeight); DrawLeases(tableY, tableHeight);
     }
-    private static readonly string[] Units = ["Sekunden", "Minuten", "Stunden", "Tage"];
+    private static readonly string[] Units = [Localizer.Text("Sekunden"), Localizer.Text("Minuten"), Localizer.Text("Stunden"), Localizer.Text("Tage")];
     private static string Remaining(LeaseRecord l)
     {
         var span = l.ExpiresUtc - DateTimeOffset.UtcNow;
-        return l.State == "Released" ? "Freigegeben" : l.State == "Declined" ? "Adresskonflikt" : span <= TimeSpan.Zero ? "Abgelaufen" : (span.Days > 0 ? span.Days + "d " : "") + span.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture);
+        return l.State == "Released" ? Localizer.Text("Freigegeben") : l.State == "Declined" ? Localizer.Text("Adresskonflikt") : span <= TimeSpan.Zero ? Localizer.Text("Abgelaufen") : (span.Days > 0 ? span.Days + "d " : "") + span.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture);
     }
     private string[] LeaseValues(LeaseRecord l) => [l.LastConfirmedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture), l.Address, l.Mac,
         l.ClientId.Length == 0 ? "—" : l.ClientId, string.IsNullOrWhiteSpace(l.Hostname) ? "—" : l.Hostname, oui.Find(l.Mac), Remaining(l)];
     private void DrawLeases(int y, int h)
     {
-        Surface.Box(1, y, mainWidth - 2, h); var headings = new[] { "Zeitstempel", "IP", "MAC-Adresse", "Client-ID", "Hostname", "Gerätehersteller", "Rest-Leasezeit" };
+        Surface.Box(1, y, mainWidth - 2, h); var headings = new[] { Localizer.Text("Zeitstempel"), "IP", Localizer.Text("MAC-Adresse"), Localizer.Text("Client-ID"), "Hostname", Localizer.Text("Gerätehersteller"), Localizer.Text("Rest-Leasezeit") };
         var visible = Math.Max(1, (h - 4) / 3); leaseOffset = Math.Clamp(leaseOffset, 0, Math.Max(0, Leases.Count - visible));
         var oldClip = Surface.Canvas.Clip; Surface.Canvas.Clip = new(2, tableRect.Y + 1, mainWidth - 4, h - 2);
         var tableControl = Surface.Custom("lease-table", tableRect, TableKey, TableMouse);
@@ -333,8 +326,8 @@ internal sealed class TuiApplication : IDisposable
             }
             Surface.Label(2, rowY + 2, new string('─', Math.Max(0, mainWidth - 4)), mainWidth - 4, TuiCanvas.Muted);
         }
-        if (Leases.Count == 0) Surface.Label(3, y + 3, "Noch keine bestätigten Adressvergaben.", mainWidth - 6, TuiCanvas.Muted);
-        Surface.Label(3, y + h - 1, " ←/→: Spalten  PgUp/PgDn: Zeilen  Kopf ziehen: Breite ", mainWidth - 6, TuiCanvas.Muted);
+        if (Leases.Count == 0) Surface.Label(3, y + 3, Localizer.Text("Noch keine bestätigten Adressvergaben."), mainWidth - 6, TuiCanvas.Muted);
+        Surface.Label(3, y + h - 1, Localizer.Text(" ←/→: Spalten  PgUp/PgDn: Zeilen  Kopf ziehen: Breite "), mainWidth - 6, TuiCanvas.Muted);
         Surface.Canvas.Clip = oldClip;
     }
     private int ColumnAt(int screenX)
@@ -354,7 +347,7 @@ internal sealed class TuiApplication : IDisposable
         var row = leaseOffset + (input.Y - tableRect.Y - 3) / 3;
         if (input.Y < tableRect.Y + 3 || row < 0 || row >= Leases.Count) return;
         selectedLease = row; selectedColumn = ColumnAt(input.X);
-        if ((input.Buttons & 2) != 0) { var value = LeaseValues(Leases[row])[selectedColumn]; ConsoleTerminal.Copy(value); Notify("Kopiert: " + value); }
+        if ((input.Buttons & 2) != 0) { var value = LeaseValues(Leases[row])[selectedColumn]; ConsoleTerminal.Copy(value); Notify(Localizer.Text("Kopiert: ") + value); }
     }
     private void TableKey(TerminalInput input)
     {
@@ -367,7 +360,7 @@ internal sealed class TuiApplication : IDisposable
             case 37: selectedColumn = Math.Max(0, selectedColumn - 1); leaseHorizontal = Math.Max(0, leaseHorizontal - 12); break;
             case 39: selectedColumn = Math.Min(6, selectedColumn + 1); leaseHorizontal = Math.Min(Math.Max(0, columnWidths.Sum() - mainWidth + 8), leaseHorizontal + 12); break;
             case 46 when Leases.Count > 0: DeleteLease(Leases[selectedLease]); return;
-            case 67 when input.Control && Leases.Count > 0: ConsoleTerminal.Copy(LeaseValues(Leases[selectedLease])[selectedColumn]); Notify("Tabellenwert kopiert."); break;
+            case 67 when input.Control && Leases.Count > 0: ConsoleTerminal.Copy(LeaseValues(Leases[selectedLease])[selectedColumn]); Notify(Localizer.Text("Tabellenwert kopiert.")); break;
         }
         selectedLease = Math.Clamp(selectedLease, 0, Math.Max(0, Leases.Count - 1));
         if (selectedLease < leaseOffset) leaseOffset = selectedLease;
@@ -377,12 +370,12 @@ internal sealed class TuiApplication : IDisposable
     {
         var x = mainWidth + 1; monitorRect = new(x, 1, width - x - 1, height - 4);
         Surface.Canvas.Box(monitorRect, color: TuiCanvas.Monitor);
-        Surface.Label(x + 2, 2, "Netzwerk-Monitor", monitorWidth - 18, TuiCanvas.Green);
+        Surface.Label(x + 2, 2, Localizer.Text("Netzwerk-Monitor"), monitorWidth - 18, TuiCanvas.Green);
         var statusColor = following ? TuiCanvas.Green : DateTime.UtcNow.Millisecond < 500 ? TuiCanvas.Red : (ushort)0x04;
         var stateRect = new TuiRect(width - 14, 2, 11, 1);
         var state = Surface.Custom("monitor-state", stateRect); state.Activate = TogglePlayback;
         Surface.Canvas.Text(stateRect.X, stateRect.Y, following ? "[▶ Live]" : "[Ⅱ PAUSE]", 11, Surface.FocusId == state.Id ? TuiCanvas.Focus : statusColor);
-        Surface.Label(x + 2, 4, "DHCP & ARP · Hochscrollen pausiert", monitorWidth - 5, TuiCanvas.Muted);
+        Surface.Label(x + 2, 4, Localizer.Text("DHCP & ARP · Hochscrollen pausiert"), monitorWidth - 5, TuiCanvas.Muted);
         var lines = history.SelectMany(line => TuiCanvas.Wrap(line, Math.Max(1, monitorRect.Width - 4))).ToList(); monitorLines = lines.Count;
         var available = Math.Max(1, monitorRect.Height - 5); var maximum = Math.Max(0, lines.Count - available);
         monitorOffset = following ? maximum : Math.Clamp(monitorOffset, 0, maximum);
@@ -423,10 +416,10 @@ internal sealed class TuiApplication : IDisposable
                 else Surface.Handle(input);
             }
             else if (input.Key == 121 || input.Control && input.Key == 81) exit = true;
-            else if (input.Key == 112) Message("Bedienung", "Pfeiltasten: Felder und Buttons auswählen\nEnter: Eingabefeld aktivieren, Eingabe übernehmen\nEscape: Eingabe verwerfen\nMehrzeilige Eingabe: Ctrl+Enter übernimmt\nEnter / Leertaste: Button oder Dropdown öffnen\nCtrl+A / Ctrl+V: Auswählen / Einfügen\nRechtsklick auf Tabellenwert: Kopieren\nPfeiltasten / Bild auf, ab: Tabelle und Monitor\nSpaltenkopf / Monitor-Trennlinie ziehen: Breite ändern\nOptionstitel anklicken: Code, Format, Aktivierung bearbeiten\nEscape: Dialog schließen · F10 / Ctrl+Q: Programm beenden");
+            else if (input.Key == 112) Message(Localizer.Text("Bedienung"), Localizer.Text("Pfeiltasten: Felder und Buttons auswählen\nEnter: Eingabefeld aktivieren, Eingabe übernehmen\nEscape: Eingabe verwerfen\nMehrzeilige Eingabe: Ctrl+Enter übernimmt\nEnter / Leertaste: Button oder Dropdown öffnen\nCtrl+A / Ctrl+V: Auswählen / Einfügen\nRechtsklick auf Tabellenwert: Kopieren\nPfeiltasten / Bild auf, ab: Tabelle und Monitor\nSpaltenkopf / Monitor-Trennlinie ziehen: Breite ändern\nOptionstitel anklicken: Code, Format, Aktivierung bearbeiten\nEscape: Dialog schließen · F10 / Ctrl+Q: Programm beenden"));
             else if (input.Key == 27 && Surface.EndInteraction(true)) SaveDraft();
             else if (input.Key == 27 && popups.Count > 0) ClosePopup();
-            else if (input.Key == 27) Notify("Zum Beenden F10 oder Ctrl+Q drücken.");
+            else if (input.Key == 27) Notify(Localizer.Text("Zum Beenden F10 oder Ctrl+Q drücken."));
             else Surface.Handle(input);
             if (wasEditing && !Surface.Editing) SaveDraft();
             if (Surface.FocusId != oldFocus)
@@ -471,23 +464,23 @@ internal sealed class TuiApplication : IDisposable
     private void OpenSaveRange()
     {
         var c = ReadConfiguration(); c.Validate(adapter!);
-        Push(new("Bereich speichern") { Kind = "name", Text = new(selectedRange ?? $"{c.StartAddress} – {c.EndAddress}"), Save = name =>
+        Push(new(Localizer.Text("Bereich speichern")) { Kind = "name", Text = new(selectedRange ?? $"{c.StartAddress} – {c.EndAddress}"), Save = name =>
         {
-            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Bitte einen Namen eingeben.");
-            Store.SaveRange(name, c); Store.SaveConfiguration(c); selectedRange = name.Trim(); RefreshRanges(); Notify($"Bereich „{selectedRange}“ gespeichert."); ClosePopup();
+            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException(Localizer.Text("Bitte einen Namen eingeben."));
+            Store.SaveRange(name, c); Store.SaveConfiguration(c); selectedRange = name.Trim(); RefreshRanges(); Notify((Localizer.IsGerman ? $"Bereich „{selectedRange}“ gespeichert." : $"Range “{selectedRange}” saved.")); ClosePopup();
         }});
     }
     private void OpenOption(ExtraOption? option)
     {
-        var popup = new Popup(option is null ? "Option hinzufügen" : "Option bearbeiten") { Kind = "option", Original = option, Code = new((option?.Code ?? 15).ToString(CultureInfo.InvariantCulture)), Value = new(option?.Value ?? ""), Format = option?.Format ?? "Text (ASCII)", Always = option?.AlwaysSend ?? false, Enabled = option?.Enabled ?? true };
+        var popup = new Popup(option is null ? Localizer.Text("Option hinzufügen") : Localizer.Text("Option bearbeiten")) { Kind = "option", Original = option, Code = new((option?.Code ?? 15).ToString(CultureInfo.InvariantCulture)), Value = new(option?.Value ?? ""), Format = option?.Format ?? "Text (ASCII)", Always = option?.AlwaysSend ?? false, Enabled = option?.Enabled ?? true };
         popup.Code.Changed = text => { if (byte.TryParse(text, out var code)) popup.Format = OptionCodec.DefaultFormat(code); };
         Push(popup);
     }
     private void SaveOption(Popup popup)
     {
         if (server.IsRunning) return;
-        if (!byte.TryParse(popup.Code.Text, out var code) || code is 0 or 255) throw new ArgumentException("Optionscode muss zwischen 1 und 254 liegen.");
-        if (options.Any(o => o.Code == code && o.Code != popup.Original?.Code)) throw new ArgumentException("Optionscode existiert bereits.");
+        if (!byte.TryParse(popup.Code.Text, out var code) || code is 0 or 255) throw new ArgumentException(Localizer.Text("Optionscode muss zwischen 1 und 254 liegen."));
+        if (options.Any(o => o.Code == code && o.Code != popup.Original?.Code)) throw new ArgumentException(Localizer.Text("Optionscode existiert bereits."));
         var option = new ExtraOption { Code = code, Name = catalog.FirstOrDefault(c => c.Code == code)?.Name ?? $"Option {code}", Format = popup.Format, Value = popup.Value.Text.Trim(), AlwaysSend = popup.Always, Enabled = popup.Enabled };
         OptionCodec.Encode(option);
         var index = popup.Original is null ? -1 : options.FindIndex(o => o.Code == popup.Original.Code);
@@ -518,51 +511,51 @@ internal sealed class TuiApplication : IDisposable
                 if (input.Key == 13) Select();
             }, input => { if (input.Wheel != 0) popup.Selected -= input.Wheel * 3; else if ((input.Buttons & 1) != 0) { popup.Selected = popup.Scroll + input.Y - rect.Y; if (popup.Selected < matches.Length) Select(); } });
             for (var i = 0; i < visible && popup.Scroll + i < matches.Length; i++) Surface.Label(rect.X, rect.Y + i, matches[popup.Scroll + i].value, rect.Width, popup.Selected == popup.Scroll + i ? TuiCanvas.Focus : TuiCanvas.Normal);
-            Surface.Button("popup-ok", x + w - 30, y + h - 4, 13, "Übernehmen", Select, matches.Length != 0);
-            Surface.Button("popup-cancel", x + w - 16, y + h - 4, 13, "Abbrechen", ClosePopup);
+            Surface.Button("popup-ok", x + w - 30, y + h - 4, 13, Localizer.Text("Übernehmen"), Select, matches.Length != 0);
+            Surface.Button("popup-cancel", x + w - 16, y + h - 4, 13, Localizer.Text("Abbrechen"), ClosePopup);
         }
         else if (popup.Kind == "name")
         {
-            Surface.Label(x + 2, y + 2, "Name des Bereichs"); Surface.Field("popup-name", x + 2, y + 3, w - 4, popup.Text);
-            Surface.Label(x + 2, y + 7, "Vorhandene Namen werden aktualisiert.", w - 4);
-            Surface.Button("popup-save", x + w - 30, y + h - 4, 13, "Speichern", () => popup.Save?.Invoke(popup.Text.Text));
-            Surface.Button("popup-cancel", x + w - 16, y + h - 4, 13, "Abbrechen", ClosePopup);
+            Surface.Label(x + 2, y + 2, Localizer.Text("Name des Bereichs")); Surface.Field("popup-name", x + 2, y + 3, w - 4, popup.Text);
+            Surface.Label(x + 2, y + 7, Localizer.Text("Vorhandene Namen werden aktualisiert."), w - 4);
+            Surface.Button("popup-save", x + w - 30, y + h - 4, 13, Localizer.Text("Speichern"), () => popup.Save?.Invoke(popup.Text.Text));
+            Surface.Button("popup-cancel", x + w - 16, y + h - 4, 13, Localizer.Text("Abbrechen"), ClosePopup);
         }
         else if (popup.Kind == "adapter")
         {
-            Surface.CheckBox("adapter-dhcp", x + 2, y + 2, "IPv4 automatisch per DHCP beziehen", popup.Dhcp, () => popup.Dhcp = !popup.Dhcp);
+            Surface.CheckBox("adapter-dhcp", x + 2, y + 2, Localizer.Text("IPv4 automatisch per DHCP beziehen"), popup.Dhcp, () => popup.Dhcp = !popup.Dhcp);
             Surface.Label(x + 2, y + 4, "IPv4-Adresse"); Surface.Field("adapter-address", x + 2, y + 5, w - 4, popup.Address, !popup.Dhcp);
-            Surface.Label(x + 2, y + 9, "Subnetzmaske"); Surface.Field("adapter-mask", x + 2, y + 10, w - 4, popup.Mask, !popup.Dhcp);
+            Surface.Label(x + 2, y + 9, Localizer.Text("Subnetzmaske")); Surface.Field("adapter-mask", x + 2, y + 10, w - 4, popup.Mask, !popup.Dhcp);
             Surface.Label(x + 2, y + 14, "Gateway (optional)"); Surface.Field("adapter-gateway", x + 2, y + 15, w - 4, popup.Gateway, !popup.Dhcp);
-            Surface.Label(x + 2, y + 19, "DNS-Adressen, kommagetrennt · leer = automatisch"); Surface.Field("adapter-dns", x + 2, y + 20, w - 4, popup.Dns);
-            Surface.Label(x + 2, y + 25, "Benötigt Administratorrechte in der aktuellen Sitzung.", w - 4, TuiCanvas.Yellow);
-            Surface.Label(x + 2, y + 26, "Eine IP-Änderung kann die SSH-Verbindung unterbrechen.", w - 4, TuiCanvas.Yellow);
-            Surface.Button("popup-save", x + w - 30, y + h - 4, 13, "Übernehmen", () => SaveAdapter(popup));
-            Surface.Button("popup-cancel", x + w - 16, y + h - 4, 13, "Abbrechen", ClosePopup);
+            Surface.Label(x + 2, y + 19, Localizer.Text("DNS-Adressen, kommagetrennt · leer = automatisch")); Surface.Field("adapter-dns", x + 2, y + 20, w - 4, popup.Dns);
+            Surface.Label(x + 2, y + 25, Localizer.Text("Benötigt Administratorrechte in der aktuellen Sitzung."), w - 4, TuiCanvas.Yellow);
+            Surface.Label(x + 2, y + 26, Localizer.Text("Eine IP-Änderung kann die SSH-Verbindung unterbrechen."), w - 4, TuiCanvas.Yellow);
+            Surface.Button("popup-save", x + w - 30, y + h - 4, 13, Localizer.Text("Übernehmen"), () => SaveAdapter(popup));
+            Surface.Button("popup-cancel", x + w - 16, y + h - 4, 13, Localizer.Text("Abbrechen"), ClosePopup);
         }
         else if (popup.Kind == "option")
         {
             var readOnly = server.IsRunning;
-            Surface.Label(x + 2, y + 2, "IANA-Optionskatalog");
+            Surface.Label(x + 2, y + 2, Localizer.Text("IANA-Optionskatalog"));
             var current = byte.TryParse(popup.Code.Text, out var code) ? catalog.FirstOrDefault(c => c.Code == code) : null;
-            Surface.Choice("popup-catalog", x + 2, y + 3, w - 4, current?.Display ?? "Eigener Optionscode", () => Pick("IANA-Optionskatalog", catalog.Select(d => d.Display + (d.Managed ? " · automatisch / clientseitig" : "")).ToArray(), i => { popup.Code.Set(catalog[i].Code.ToString(CultureInfo.InvariantCulture)); popup.Format = catalog[i].Format; }), !readOnly);
-            Surface.Label(x + 2, y + 7, "Optionscode"); Surface.Field("popup-code", x + 2, y + 8, 14, popup.Code, !readOnly);
-            Surface.Label(x + 18, y + 7, "Datenformat"); Surface.Choice("popup-format", x + 18, y + 8, w - 20, popup.Format, () => Pick("Datenformat", OptionCodec.Formats, i => popup.Format = OptionCodec.Formats[i]), !readOnly);
-            Surface.Label(x + 2, y + 12, "Wert" + (popup.Format == "Routen" ? " · eine Route je Zeile" : "")); popup.Value.Multiline = popup.Format == "Routen";
+            Surface.Choice("popup-catalog", x + 2, y + 3, w - 4, current?.Display ?? Localizer.Text("Eigener Optionscode"), () => Pick(Localizer.Text("IANA-Optionskatalog"), catalog.Select(d => d.Display + (d.Managed ? Localizer.Text(" · automatisch / clientseitig") : "")).ToArray(), i => { popup.Code.Set(catalog[i].Code.ToString(CultureInfo.InvariantCulture)); popup.Format = catalog[i].Format; }), !readOnly);
+            Surface.Label(x + 2, y + 7, Localizer.Text("Optionscode")); Surface.Field("popup-code", x + 2, y + 8, 14, popup.Code, !readOnly);
+            Surface.Label(x + 18, y + 7, Localizer.Text("Datenformat")); Surface.Choice("popup-format", x + 18, y + 8, w - 20, Localizer.Text(popup.Format), () => Pick(Localizer.Text("Datenformat"), OptionCodec.Formats.Select(Localizer.Text).ToArray(), i => popup.Format = OptionCodec.Formats[i]), !readOnly);
+            Surface.Label(x + 2, y + 12, Localizer.Text("Wert") + (popup.Format == "Routen" ? Localizer.Text(" · eine Route je Zeile") : "")); popup.Value.Multiline = popup.Format == "Routen";
             Surface.Field("popup-value", x + 2, y + 13, w - 4, popup.Value, !readOnly, Math.Max(3, Math.Min(7, h - 23)));
             var helpY = y + h - 12;
-            var description = current?.Description ?? "Eigener Optionscode. Format und Kodierung anhand der Gerätespezifikation prüfen.";
+            var description = current?.Description ?? Localizer.Text("Eigener Optionscode. Format und Kodierung anhand der Gerätespezifikation prüfen.");
             var lines = TuiCanvas.Wrap(description, w - 4); for (var i = 0; i < Math.Min(2, lines.Count); i++) Surface.Label(x + 2, helpY + i, lines[i], w - 4, TuiCanvas.Muted);
-            Surface.CheckBox("popup-always", x + 2, y + h - 9, "Auch ohne Client-Anfrage senden", popup.Always, () => popup.Always = !popup.Always, !readOnly);
-            Surface.CheckBox("popup-enabled", x + 2, y + h - 7, "Option aktiv", popup.Enabled, () => popup.Enabled = !popup.Enabled, !readOnly);
-            Surface.Button("popup-help", x + 2, y + h - 4, 5, "?", () => Message("Option und Kodierung", description + "\nDatenformat: " + popup.Format + "\n" + (current?.Reference ?? "Herstellerspezifikation") + "\n\nIPv4-Liste: Adressen durch Komma trennen.\nRouten: eine Route je Zeile, z. B. 10.20.0.0/16=192.168.50.254\nDomainliste: Namen durch Komma trennen.\nHex: Bytes, z. B. 01 04 C0 A8 32 FE"));
-            Surface.Button("popup-save", x + w - 30, y + h - 4, 13, "Übernehmen", () => SaveOption(popup), !readOnly);
-            Surface.Button("popup-cancel", x + w - 16, y + h - 4, 13, "Schließen", ClosePopup);
+            Surface.CheckBox("popup-always", x + 2, y + h - 9, Localizer.Text("Auch ohne Client-Anfrage senden"), popup.Always, () => popup.Always = !popup.Always, !readOnly);
+            Surface.CheckBox("popup-enabled", x + 2, y + h - 7, Localizer.Text("Option aktiv"), popup.Enabled, () => popup.Enabled = !popup.Enabled, !readOnly);
+            Surface.Button("popup-help", x + 2, y + h - 4, 5, "?", () => Message(Localizer.Text("Option und Kodierung"), description + Localizer.Text("\nDatenformat: ") + popup.Format + "\n" + (current?.Reference ?? Localizer.Text("Herstellerspezifikation")) + Localizer.Text("\n\nIPv4-Liste: Adressen durch Komma trennen.\nRouten: eine Route je Zeile, z. B. 10.20.0.0/16=192.168.50.254\nDomainliste: Namen durch Komma trennen.\nHex: Bytes, z. B. 01 04 C0 A8 32 FE")));
+            Surface.Button("popup-save", x + w - 30, y + h - 4, 13, Localizer.Text("Übernehmen"), () => SaveOption(popup), !readOnly);
+            Surface.Button("popup-cancel", x + w - 16, y + h - 4, 13, Localizer.Text("Schließen"), ClosePopup);
         }
         else
         {
             var lines = TuiCanvas.Wrap(popup.Message, w - 4); for (var i = 0; i < Math.Min(h - 6, lines.Count); i++) Surface.Label(x + 2, y + 2 + i, lines[i], w - 4);
-            Surface.Button("popup-close", x + w - 16, y + h - 4, 13, "Schließen", ClosePopup);
+            Surface.Button("popup-close", x + w - 16, y + h - 4, 13, Localizer.Text("Schließen"), ClosePopup);
         }
         if (popup.Error.Length > 0) Surface.Label(x + 2, y + h - 5, popup.Error, w - 4, TuiCanvas.Red);
         Surface.OffsetY = 0; Surface.Canvas.Clip = new(0, 0, width, height);

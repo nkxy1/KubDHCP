@@ -36,9 +36,9 @@ public static class OptionCodec
     };
     public static byte[] Encode(ExtraOption option)
     {
-        if (ManagedCodes.Contains(option.Code)) throw new ArgumentException($"Option {option.Code} wird vom Protokoll oder Hauptformular verwaltet und kann nicht zusätzlich gesendet werden.");
+        if (ManagedCodes.Contains(option.Code)) throw new ArgumentException((Localizer.IsGerman ? $"Option {option.Code} wird vom Protokoll oder Hauptformular verwaltet und kann nicht zusätzlich gesendet werden." : $"Option {option.Code} is managed by the protocol or main form and cannot be sent as an additional option."));
         var value = option.Value.Trim();
-        if (value.Length == 0) throw new ArgumentException("Der Optionswert darf nicht leer sein.");
+        if (value.Length == 0) throw new ArgumentException(Localizer.Text("Der Optionswert darf nicht leer sein."));
         byte[] bytes;
         try
         {
@@ -50,14 +50,14 @@ public static class OptionCodec
                 "UInt8" => [byte.Parse(value, CultureInfo.InvariantCulture)],
                 "UInt16" => UInt16Bytes(ushort.Parse(value, CultureInfo.InvariantCulture)),
                 "UInt32" => UInt32Bytes(uint.Parse(value, CultureInfo.InvariantCulture)),
-                "Boolean" => [value.ToLowerInvariant() switch { "true" or "1" or "ja" => (byte)1, "false" or "0" or "nein" => (byte)0, _ => throw new FormatException("Boolean erwartet true/false oder 1/0.") }],
+                "Boolean" => [value.ToLowerInvariant() switch { "true" or "1" or "ja" => (byte)1, "false" or "0" or "nein" => (byte)0, _ => throw new FormatException(Localizer.Text("Boolean erwartet true/false oder 1/0.")) }],
                 "Domainliste" => Domains(value), "Routen" => Routes(value),
                 "Hex" => Convert.FromHexString(string.Concat(value.Where(c => !char.IsWhiteSpace(c) && c != ':' && c != '-'))),
-                _ => throw new FormatException("Unbekanntes Optionsformat.")
+                _ => throw new FormatException(Localizer.Text("Unbekanntes Optionsformat."))
             };
         }
         catch (Exception ex) when (ex is FormatException or OverflowException or EncoderFallbackException) { throw new ArgumentException($"Option {option.Code}: {ex.Message}", ex); }
-        if (bytes.Length == 0 || bytes.Length > 3500) throw new ArgumentException("Ein zusätzlicher Optionswert muss 1 bis 3500 Bytes enthalten.");
+        if (bytes.Length == 0 || bytes.Length > 3500) throw new ArgumentException(Localizer.Text("Ein zusätzlicher Optionswert muss 1 bis 3500 Bytes enthalten."));
         return bytes;
     }
     public static byte[] IpBytes(string text) => UInt32Bytes(Ipv4.Parse(text));
@@ -69,10 +69,10 @@ public static class OptionCodec
         foreach (var domain in text.Split([',', ';', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
             var name = idn.GetAscii(domain.TrimEnd('.'));
-            if (name.Length > 253) throw new FormatException("Domainname ist zu lang.");
+            if (name.Length > 253) throw new FormatException(Localizer.Text("Domainname ist zu lang."));
             foreach (var label in name.Split('.'))
             {
-                if (label.Length is < 1 or > 63 || label.Any(c => !char.IsAsciiLetterOrDigit(c) && c != '-')) throw new FormatException("Ungültiges DNS-Label.");
+                if (label.Length is < 1 or > 63 || label.Any(c => !char.IsAsciiLetterOrDigit(c) && c != '-')) throw new FormatException(Localizer.Text("Ungültiges DNS-Label."));
                 result.Add((byte)label.Length); result.AddRange(Encoding.ASCII.GetBytes(label));
             }
             result.Add(0);
@@ -85,9 +85,9 @@ public static class OptionCodec
         foreach (var item in text.Split([';', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
             var route = item.Split('=', StringSplitOptions.TrimEntries); var destination = route[0].Split('/');
-            if (route.Length != 2 || destination.Length != 2 || !byte.TryParse(destination[1], out var prefix) || prefix > 32) throw new FormatException("Route erwartet Ziel/Präfix=Gateway, z. B. 10.20.0.0/16=192.168.50.254.");
+            if (route.Length != 2 || destination.Length != 2 || !byte.TryParse(destination[1], out var prefix) || prefix > 32) throw new FormatException(Localizer.Text("Route erwartet Ziel/Präfix=Gateway, z. B. 10.20.0.0/16=192.168.50.254."));
             var ip = Ipv4.Parse(destination[0]); var mask = prefix == 0 ? 0 : uint.MaxValue << (32 - prefix);
-            if ((ip & mask) != ip) throw new FormatException("Das Routenziel muss eine Netzadresse sein.");
+            if ((ip & mask) != ip) throw new FormatException(Localizer.Text("Das Routenziel muss eine Netzadresse sein."));
             result.Add(prefix); result.AddRange(UInt32Bytes(ip).Take((prefix + 7) / 8)); result.AddRange(IpBytes(route[1]));
         }
         return result.ToArray();

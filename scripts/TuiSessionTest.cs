@@ -17,7 +17,7 @@ public static class KubTuiSessionTest
     [StructLayout(LayoutKind.Sequential)] struct StartupEx { public Startup Startup; public IntPtr Attributes; }
     [StructLayout(LayoutKind.Sequential)] struct ProcessInfo { public IntPtr Process,Thread; public uint Id,ThreadId; }
     static void Check(bool result) { if(!result) throw new Win32Exception(Marshal.GetLastWin32Error()); }
-    public static void Run(string powershell, string exe)
+    public static void Run(string powershell, string exe, string language)
     {
         IntPtr inRead=IntPtr.Zero,inWrite=IntPtr.Zero,outRead=IntPtr.Zero,outWrite=IntPtr.Zero,pty=IntPtr.Zero,list=IntPtr.Zero;
         ProcessInfo process=new ProcessInfo(); var captured=new StringBuilder(); object sync=new object(); Thread reader=null;
@@ -33,7 +33,7 @@ public static class KubTuiSessionTest
             var start=new StartupEx(); start.Startup.Size=Marshal.SizeOf<StartupEx>(); start.Attributes=list;
             // EncodedCommand avoids shell quoting and emits a marker only after the
             // direct EXE invocation returns. A GUI-subsystem regression returns early.
-            string script="& '"+exe.Replace("'","''")+"' --tui; [IO.File]::WriteAllText('"+marker.Replace("'","''")+"','RETURNED_TO_POWERSHELL')";
+            string script="& '"+exe.Replace("'","''")+"' --tui --demo --language="+language+"; [IO.File]::WriteAllText('"+marker.Replace("'","''")+"','RETURNED_TO_POWERSHELL')";
             var command=new StringBuilder("\""+powershell+"\" -NoLogo -NoProfile -EncodedCommand "+Convert.ToBase64String(Encoding.Unicode.GetBytes(script)));
             Check(CreateProcess(null,command,IntPtr.Zero,IntPtr.Zero,false,0x80000,IntPtr.Zero,null,ref start,out process));
             reader=new Thread(()=>
@@ -50,13 +50,13 @@ public static class KubTuiSessionTest
                 string snapshot=Output(); throw new InvalidOperationException(error+"\n"+snapshot.Substring(Math.Max(0,snapshot.Length-1500)));
             }
             void Send(string text) {var data=Encoding.UTF8.GetBytes(text); Check(WriteFile(inWrite,data,(uint)data.Length,out _,IntPtr.Zero));}
-            Until(s=>s.Contains("DHCP-Konfiguration"),"TUI did not render inside PowerShell/ConPTY");
+            Until(s=>s.Contains(language == "de" ? "DHCP-Konfiguration" : "DHCP configuration"),"TUI did not render inside PowerShell/ConPTY");
             Thread.Sleep(400);
             if(File.Exists(marker)) throw new InvalidOperationException("PowerShell returned before TUI exit");
             // Real SGR mouse click/release on the Monitor button at columns 133..137.
             Send("\x1b[<0;135;4M\x1b[<0;135;4m");
-            Until(s=>s.Contains("Netzwerk-Monitor"),"Remote mouse click did not open monitor");
-            Send("\t\x1b[Z\x1bOP"); Until(s=>s.Contains("Bedienung"),"Remote F1 key did not open help");
+            Until(s=>s.Contains(language == "de" ? "Netzwerk-Monitor" : "Network monitor"),"Remote mouse click did not open monitor");
+            Send("\t\x1b[Z\x1bOP"); Until(s=>s.Contains(language == "de" ? "Bedienung" : "Controls"),"Remote F1 key did not open help");
             Send("\x1b"); Thread.Sleep(300);
             hr=ResizePseudoConsole(pty,new Coord(100,35)); if(hr!=0) Marshal.ThrowExceptionForHR(hr);
             Thread.Sleep(300); Send("\x11");

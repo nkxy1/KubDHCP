@@ -31,7 +31,7 @@
     <SatelliteResourceLanguages>de;en</SatelliteResourceLanguages>
     <AppxPackage>false</AppxPackage>
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
-    <Version>1.0.15</Version>
+    <Version>1.0.16</Version>
     <Description>Portabler DHCPv4-Server zur Geräteinbetriebnahme</Description>
   </PropertyGroup>
   <ItemGroup>

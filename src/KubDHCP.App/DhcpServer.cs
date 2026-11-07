@@ -28,7 +28,7 @@ internal sealed class DhcpServer : IAsyncDisposable
         var removed = receiveTask is not null && engine is not null ? engine.RemoveLease(lease) : store.RemoveLease(lease);
         if (removed)
         {
-            Log($"LEASE ENTFERNT · Client {lease.Mac} · IP {lease.Address} · Bereich {lease.Scope}");
+            Log((Localizer.IsGerman ? $"LEASE ENTFERNT · Client {lease.Mac} · IP {lease.Address} · Bereich {lease.Scope}" : $"LEASE REMOVED · Client {lease.Mac} · IP {lease.Address} · range {lease.Scope}"));
             LeasesChanged?.Invoke();
         }
         return removed;
@@ -36,8 +36,9 @@ internal sealed class DhcpServer : IAsyncDisposable
 
     public void Start(AdapterInfo adapter, ServerConfiguration configuration)
     {
-        if (IsRunning) throw new InvalidOperationException("Der Server läuft bereits.");
-        var current = AdapterInfo.Enumerate().FirstOrDefault(a => a.Key == adapter.Key) ?? throw new InvalidOperationException("Die gewählte LAN-Karte ist nicht mehr verfügbar.");
+        if (Program.DemoMode) throw new InvalidOperationException("DEMO: server start is disabled.");
+        if (IsRunning) throw new InvalidOperationException(Localizer.Text("Der Server läuft bereits."));
+        var current = AdapterInfo.Enumerate().FirstOrDefault(a => a.Key == adapter.Key) ?? throw new InvalidOperationException(Localizer.Text("Die gewählte LAN-Karte ist nicht mehr verfügbar."));
         configuration.Validate(current);
         var candidate = new DhcpEngine(configuration, store);
         var udp = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp) { ExclusiveAddressUse = true, EnableBroadcast = true, ReceiveBufferSize = 65536 };
@@ -53,8 +54,8 @@ internal sealed class DhcpServer : IAsyncDisposable
         var token = cancellation.Token;
         receiveTask = Task.Run(() => ReceiveAsync(current, configuration, udp, token));
         monitorTask = Task.Run(() => MonitorAsync(current, token));
-        Log($"Gestartet auf {current.Name} ({current.Address}), UDP 67. Initiale Antworten verwenden den RFC-2131-Broadcast-Fallback; Renewals sind Unicast.");
-        Log($"Pool {configuration.StartAddress} – {configuration.EndAddress} · Maske {configuration.Mask} · Lease {configuration.LeaseSeconds} s · Gateway {configuration.Gateway} · DNS {configuration.PrimaryDns} {configuration.SecondaryDns}");
+        Log((Localizer.IsGerman ? $"Gestartet auf {current.Name} ({current.Address}), UDP 67. Initiale Antworten verwenden den RFC-2131-Broadcast-Fallback; Renewals sind Unicast." : $"Started on {current.Name} ({current.Address}), UDP 67. Initial replies use the RFC 2131 broadcast fallback; renewals use unicast."));
+        Log((Localizer.IsGerman ? $"Pool {configuration.StartAddress} – {configuration.EndAddress} · Maske {configuration.Mask} · Lease {configuration.LeaseSeconds} s · Gateway {configuration.Gateway} · DNS {configuration.PrimaryDns} {configuration.SecondaryDns}" : $"Pool {configuration.StartAddress} – {configuration.EndAddress} · mask {configuration.Mask} · Lease {configuration.LeaseSeconds} s · Gateway {configuration.Gateway} · DNS {configuration.PrimaryDns} {configuration.SecondaryDns}"));
         LeasesChanged?.Invoke();
     }
 
@@ -67,15 +68,15 @@ internal sealed class DhcpServer : IAsyncDisposable
             {
                 var received = await udp.ReceiveMessageFromAsync(buffer, SocketFlags.None, client, token);
                 var source = received.RemoteEndPoint.ToString();
-                Activity($"EMPFANG UDP {source} → {configuration.ServerAddress}:67 · {received.ReceivedBytes} Bytes · Schnittstelle {received.PacketInformation.Interface}");
+                Activity((Localizer.IsGerman ? $"EMPFANG UDP {source} → {configuration.ServerAddress}:67 · {received.ReceivedBytes} Bytes · Schnittstelle {received.PacketInformation.Interface}" : $"RECEIVE UDP {source} → {configuration.ServerAddress}:67 · {received.ReceivedBytes} bytes · interface {received.PacketInformation.Interface}"));
                 // Log ignored packets as well; the acceptance rules remain unchanged.
                 if (received.PacketInformation.Interface != adapter.InterfaceIndex || received.ReceivedBytes == 0 || received.RemoteEndPoint is not IPEndPoint remote || remote.Port != 68)
-                { Activity($"IGNORIERT · {source} · andere/unbekannte Schnittstelle, leerer Inhalt oder Quellport ungleich 68."); continue; }
+                { Activity((Localizer.IsGerman ? $"IGNORIERT · {source} · andere/unbekannte Schnittstelle, leerer Inhalt oder Quellport ungleich 68." : $"IGNORED · {source} · different/unknown interface, empty payload or source port other than 68.")); continue; }
                 if (!DhcpPacket.TryParse(buffer.AsSpan(0, received.ReceivedBytes), out var request) || request is null)
-                { Activity($"IGNORIERT · {source} · ungültiges oder unvollständiges DHCP-Paket."); continue; }
-                Activity("ANFRAGE · " + NetworkMonitorText.Request(request));
+                { Activity((Localizer.IsGerman ? $"IGNORIERT · {source} · ungültiges oder unvollständiges DHCP-Paket." : $"IGNORED · {source} · invalid or incomplete DHCP packet.")); continue; }
+                Activity(Localizer.Text("ANFRAGE · ") + NetworkMonitorText.Request(request));
                 if (request.RelayAddress != 0)
-                { Activity($"IGNORIERT · {request.Mac} · DHCP-Relay {Ipv4.Format(request.RelayAddress)} wird nicht unterstützt."); continue; }
+                { Activity((Localizer.IsGerman ? $"IGNORIERT · {request.Mac} · DHCP-Relay {Ipv4.Format(request.RelayAddress)} wird nicht unterstützt." : $"IGNORED · {request.Mac} · DHCP-Relay {Ipv4.Format(request.RelayAddress)} is not supported.")); continue; }
                 try
                 {
                     var reply = engine!.Handle(request, DateTimeOffset.UtcNow);
@@ -85,28 +86,28 @@ internal sealed class DhcpServer : IAsyncDisposable
                         for (var tries = 0; reply is not null && tries < 16; tries++)
                         {
                             token.ThrowIfCancellationRequested();
-                            Activity($"ARP PRÜFUNG · {NetworkMonitorText.Client(request)} · Ist {Ipv4.Format(reply.Address)} bereits belegt? Quelle {configuration.ServerAddress}");
+                            Activity((Localizer.IsGerman ? $"ARP PRÜFUNG · {NetworkMonitorText.Client(request)} · Ist {Ipv4.Format(reply.Address)} bereits belegt? Quelle {configuration.ServerAddress}" : $"ARP CHECK · {NetworkMonitorText.Client(request)} · Is {Ipv4.Format(reply.Address)} already occupied? Source {configuration.ServerAddress}"));
                             var owner = NativeUdpSender.FindMac(reply.Address, configuration.ServerAddress);
-                            Activity(owner is null ? $"ARP ERGEBNIS · {Ipv4.Format(reply.Address)} · kein antwortender Besitzer ermittelt."
-                                : $"ARP ERGEBNIS · {Ipv4.Format(reply.Address)} · Besitzer {string.Join(":", owner.Select(b => b.ToString("X2")))}");
+                            Activity(owner is null ? (Localizer.IsGerman ? $"ARP ERGEBNIS · {Ipv4.Format(reply.Address)} · kein antwortender Besitzer ermittelt." : $"ARP RESULT · {Ipv4.Format(reply.Address)} · no responding owner found.")
+                                : (Localizer.IsGerman ? $"ARP ERGEBNIS · {Ipv4.Format(reply.Address)} · Besitzer {string.Join(":", owner.Select(b => b.ToString("X2")))}" : $"ARP RESULT · {Ipv4.Format(reply.Address)} · owner {string.Join(":", owner.Select(b => b.ToString("X2")))}"));
                             if (owner is null || owner.SequenceEqual(request.HardwareAddress)) break;
-                            engine.Quarantine(reply.Address, DateTimeOffset.UtcNow); Log($"Adresskonflikt: {Ipv4.Format(reply.Address)} für 10 Minuten gesperrt.");
+                            engine.Quarantine(reply.Address, DateTimeOffset.UtcNow); Log((Localizer.IsGerman ? $"Adresskonflikt: {Ipv4.Format(reply.Address)} für 10 Minuten gesperrt." : $"Address conflict: {Ipv4.Format(reply.Address)} quarantined for 10 minutes."));
                             reply = tries == 15 ? null : engine.Handle(request, DateTimeOffset.UtcNow);
                         }
                     }
-                    if (reply is null) { Activity($"KEINE ANTWORT · {NetworkMonitorText.Client(request)} · {NetworkMonitorText.NoReply(request, configuration.ServerAddress)}"); continue; }
+                    if (reply is null) { Activity((Localizer.IsGerman ? $"KEINE ANTWORT · {NetworkMonitorText.Client(request)} · {NetworkMonitorText.NoReply(request, configuration.ServerAddress)}" : $"NO REPLY · {NetworkMonitorText.Client(request)} · {NetworkMonitorText.NoReply(request, configuration.ServerAddress)}")); continue; }
                     var bytes = DhcpPacketWriter.Build(request, reply, configuration);
                     var destination = reply.Type == DhcpMessageType.Nak || request.ClientAddress == 0 || request.Broadcast ? IPAddress.Broadcast : Ipv4.ToAddress(request.ClientAddress);
                     try { sender!.Send(bytes, destination, 68); }
                     catch (Exception ex) when (ex is SocketException or IOException)
-                    { Activity($"SENDEN FEHLGESCHLAGEN · {NetworkMonitorText.Client(request)} · {destination}:68 · {ex.Message}"); throw; }
-                    Log($"ANTWORT UDP {configuration.ServerAddress}:67 → {destination}:68 · {bytes.Length} Bytes · {(destination.Equals(IPAddress.Broadcast) ? "Broadcast" : "Unicast")} · {NetworkMonitorText.Response(request, reply, bytes)}", $"{reply.Type.ToString().ToUpperInvariant()} · {request.Mac}" + (reply.Address == 0 ? "" : $" · {Ipv4.Format(reply.Address)}"));
+                    { Activity((Localizer.IsGerman ? $"SENDEN FEHLGESCHLAGEN · {NetworkMonitorText.Client(request)} · {destination}:68 · {ex.Message}" : $"SEND FAILED · {NetworkMonitorText.Client(request)} · {destination}:68 · {ex.Message}")); throw; }
+                    Log((Localizer.IsGerman ? $"ANTWORT UDP {configuration.ServerAddress}:67 → {destination}:68 · {bytes.Length} Bytes · {(destination.Equals(IPAddress.Broadcast) ? "Broadcast" : "Unicast")} · {NetworkMonitorText.Response(request, reply, bytes)}" : $"REPLY UDP {configuration.ServerAddress}:67 → {destination}:68 · {bytes.Length} Bytes · {(destination.Equals(IPAddress.Broadcast) ? "Broadcast" : "Unicast")} · {NetworkMonitorText.Response(request, reply, bytes)}"), $"{reply.Type.ToString().ToUpperInvariant()} · {request.Mac}" + (reply.Address == 0 ? "" : $" · {Ipv4.Format(reply.Address)}"));
                 }
-                catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { Log($"VERARBEITUNGSFEHLER · {NetworkMonitorText.Client(request)} · {ex.Message}"); }
+                catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { Log((Localizer.IsGerman ? $"VERARBEITUNGSFEHLER · {NetworkMonitorText.Client(request)} · {ex.Message}" : $"PROCESSING ERROR · {NetworkMonitorText.Client(request)} · {ex.Message}")); }
             }
         }
         catch (Exception ex) when (token.IsCancellationRequested && ex is OperationCanceledException or ObjectDisposedException or SocketException) { }
-        catch (Exception ex) { Fault($"DHCP-Empfang beendet: {ex.Message}"); }
+        catch (Exception ex) { Fault((Localizer.IsGerman ? $"DHCP-Empfang beendet: {ex.Message}" : $"DHCP receive loop ended: {ex.Message}")); }
     }
 
     private async Task MonitorAsync(AdapterInfo adapter, CancellationToken token)
@@ -116,10 +117,10 @@ internal sealed class DhcpServer : IAsyncDisposable
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
             while (await timer.WaitForNextTickAsync(token))
                 if (!AdapterInfo.Enumerate().Any(a => a.Key == adapter.Key && a.InterfaceIndex == adapter.InterfaceIndex && a.Mask == adapter.Mask))
-                { Fault("LAN-Karte getrennt oder IPv4-Konfiguration geändert. Server wurde gestoppt."); return; }
+                { Fault(Localizer.Text("LAN-Karte getrennt oder IPv4-Konfiguration geändert. Server wurde gestoppt.")); return; }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
-        catch (Exception ex) { Fault($"Adapterüberwachung fehlgeschlagen: {ex.Message}"); }
+        catch (Exception ex) { Fault((Localizer.IsGerman ? $"Adapterüberwachung fehlgeschlagen: {ex.Message}" : $"Adapter monitoring failed: {ex.Message}")); }
     }
     private void Fault(string message)
     {
@@ -140,7 +141,7 @@ internal sealed class DhcpServer : IAsyncDisposable
         if (receiveTask is not null) await receiveTask;
         if (monitorTask is not null) await monitorTask;
         socket = null; sender = null; cancellation?.Dispose(); cancellation = null; receiveTask = monitorTask = null;
-        if (wasStarted) Log("Server gestoppt · UDP-Empfang beendet.");
+        if (wasStarted) Log(Localizer.Text("Server gestoppt · UDP-Empfang beendet."));
     }
     public async ValueTask DisposeAsync() => await StopAsync();
 }
@@ -183,7 +184,7 @@ internal sealed class NativeUdpSender
             var buffer = new Buffer { Length = (uint)data.Length, Pointer = (nint)payload };
             var message = new Message { Name = (nint)target, NameLength = 16, Buffers = (nint)(&buffer), BufferCount = 1, Control = new() { Length = 24, Pointer = (nint)ancillary } };
             if (send(socket.Handle, ref message, 0, out var sent, 0, 0) != 0) throw new SocketException(Marshal.GetLastPInvokeError());
-            if (sent != data.Length) throw new IOException("DHCP-Antwort wurde nicht vollständig gesendet.");
+            if (sent != data.Length) throw new IOException(Localizer.Text("DHCP-Antwort wurde nicht vollständig gesendet."));
         }
     }
 }

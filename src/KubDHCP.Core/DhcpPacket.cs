@@ -117,7 +117,7 @@ public static class DhcpPacketWriter
         result.Add(255);
         while (result.Count < 300) result.Add(0);
         var maximum = request.Options.TryGetValue(57, out var size) ? Math.Clamp(BinaryPrimitives.ReadUInt16BigEndian(size) - 28, 548, 4096) : 548;
-        if (result.Count > maximum) throw new InvalidOperationException($"DHCP-Antwort ({result.Count} Bytes) überschreitet die vom Client erlaubte Größe ({maximum} Bytes). Zusätzliche Optionen verkleinern.");
+        if (result.Count > maximum) throw new InvalidOperationException((Localizer.IsGerman ? $"DHCP-Antwort ({result.Count} Bytes) überschreitet die vom Client erlaubte Größe ({maximum} Bytes). Zusätzliche Optionen verkleinern." : $"DHCP reply ({result.Count} bytes) exceeds the client's maximum size ({maximum} bytes). Reduce additional options."));
         return result.ToArray();
     }
     private static void Add(List<byte> output, byte code, byte[] value)

@@ -5,41 +5,41 @@ namespace KubDHCP.Core;
 /// <summary>Readable summaries of the packets handled by this DHCP server.</summary>
 public static class NetworkMonitorText
 {
-    public static string Client(DhcpPacket packet) => $"Client {packet.Mac} · Transaktion {Convert.ToHexString(packet.Header.AsSpan(4, 4))}" + (packet.Hostname.Length == 0 ? "" : $" · Hostname {packet.Hostname}");
+    public static string Client(DhcpPacket packet) => (Localizer.IsGerman ? $"Client {packet.Mac} · Transaktion {Convert.ToHexString(packet.Header.AsSpan(4, 4))}" : $"Client {packet.Mac} · transaction {Convert.ToHexString(packet.Header.AsSpan(4, 4))}") + (packet.Hostname.Length == 0 ? "" : $" · Hostname {packet.Hostname}");
     public static string Request(DhcpPacket packet) => $"{packet.MessageType.ToString().ToUpperInvariant()} · {Client(packet)} · {Meaning(packet.MessageType)}"
-        + (packet.ClientAddress != 0 ? $" · aktuelle IP {Ipv4.Format(packet.ClientAddress)}" : "")
-        + $" · Optionen: {Options(packet.Options)}";
+        + (packet.ClientAddress != 0 ? (Localizer.IsGerman ? $" · aktuelle IP {Ipv4.Format(packet.ClientAddress)}" : $" · current IP {Ipv4.Format(packet.ClientAddress)}") : "")
+        + (Localizer.IsGerman ? $" · Optionen: {Options(packet.Options)}" : $" · options: {Options(packet.Options)}");
 
     public static string Response(DhcpPacket request, DhcpReply reply, byte[] payload)
     {
         // The parser's BOOTREQUEST restriction is only adapted on our own outgoing packet copy.
         var copy = payload.ToArray(); copy[0] = 1;
-        var options = DhcpPacket.TryParse(copy, out var parsed) ? Options(parsed!.Options) : "nicht dekodierbar";
+        var options = DhcpPacket.TryParse(copy, out var parsed) ? Options(parsed!.Options) : Localizer.Text("nicht dekodierbar");
         return $"{reply.Type.ToString().ToUpperInvariant()} · {Client(request)} · {Meaning(reply.Type)}"
-            + (reply.Address != 0 ? $" · IP {Ipv4.Format(reply.Address)}" : "") + $" · Optionen: {options}";
+            + (reply.Address != 0 ? $" · IP {Ipv4.Format(reply.Address)}" : "") + (Localizer.IsGerman ? $" · Optionen: {options}" : $" · options: {options}");
     }
     public static string NoReply(DhcpPacket packet, string serverAddress) => packet.MessageType switch
     {
-        DhcpMessageType.Release => "RELEASE verarbeitet, falls ein passender Lease besteht; keine Antwort vorgesehen.",
-        DhcpMessageType.Decline => "DECLINE geprüft; passende angebotene/aktive Adresse wird gesperrt. Keine Antwort vorgesehen.",
-        DhcpMessageType.Discover => "Kein Angebot möglich: kein freier oder konfliktfreier Eintrag im Adresspool.",
+        DhcpMessageType.Release => Localizer.Text("RELEASE verarbeitet, falls ein passender Lease besteht; keine Antwort vorgesehen."),
+        DhcpMessageType.Decline => Localizer.Text("DECLINE geprüft; passende angebotene/aktive Adresse wird gesperrt. Keine Antwort vorgesehen."),
+        DhcpMessageType.Discover => Localizer.Text("Kein Angebot möglich: kein freier oder konfliktfreier Eintrag im Adresspool."),
         DhcpMessageType.Request when packet.IpOption(54) is { } server && server != Ipv4.Parse(serverAddress)
-            => $"Anfrage richtet sich an DHCP-Server {Ipv4.Format(server)}; keine Antwort von diesem Server.",
-        _ => "Keine Antwort: Anfrage passt nicht zu unserem Subnetz, Nachrichtentyp oder einer gültigen Reservierung/einem bekannten Lease."
+            => (Localizer.IsGerman ? $"Anfrage richtet sich an DHCP-Server {Ipv4.Format(server)}; keine Antwort von diesem Server." : $"Request is addressed to DHCP server {Ipv4.Format(server)}; this server will not reply."),
+        _ => Localizer.Text("Keine Antwort: Anfrage passt nicht zu unserem Subnetz, Nachrichtentyp oder einer gültigen Reservierung/einem bekannten Lease.")
     };
     private static string Meaning(DhcpMessageType type) => type switch
     {
-        DhcpMessageType.Discover => "sucht eine Adresse", DhcpMessageType.Request => "fordert/bestätigt/erneuert eine Adresse",
-        DhcpMessageType.Release => "gibt seine Adresse frei", DhcpMessageType.Decline => "meldet einen Adresskonflikt",
-        DhcpMessageType.Inform => "fragt Konfiguration ohne neue Adresse an", DhcpMessageType.Offer => "Adresse angeboten",
-        DhcpMessageType.Ack => "Anfrage bestätigt", DhcpMessageType.Nak => "Adressanfrage abgelehnt", _ => "DHCP-Nachricht"
+        DhcpMessageType.Discover => Localizer.Text("sucht eine Adresse"), DhcpMessageType.Request => Localizer.Text("fordert/bestätigt/erneuert eine Adresse"),
+        DhcpMessageType.Release => Localizer.Text("gibt seine Adresse frei"), DhcpMessageType.Decline => Localizer.Text("meldet einen Adresskonflikt"),
+        DhcpMessageType.Inform => Localizer.Text("fragt Konfiguration ohne neue Adresse an"), DhcpMessageType.Offer => Localizer.Text("Adresse angeboten"),
+        DhcpMessageType.Ack => Localizer.Text("Anfrage bestätigt"), DhcpMessageType.Nak => Localizer.Text("Adressanfrage abgelehnt"), _ => Localizer.Text("DHCP-Nachricht")
     };
     public static string Options(IReadOnlyDictionary<byte, byte[]> options) => string.Join("; ", options.OrderBy(o => o.Key).Where(o => o.Key != 53).Select(o => $"{OptionName(o.Key)}={Value(o.Key, o.Value)}"));
     private static string OptionName(byte code) => code switch
     {
-        1 => "Subnetzmaske", 3 => "Gateway", 6 => "DNS", 12 => "Hostname", 15 => "Domäne", 50 => "gewünschte IP",
-        51 => "Lease-Dauer", 54 => "DHCP-Server", 55 => "angefragte Optionen", 57 => "max. Nachrichtengröße",
-        58 => "Erneuerung nach", 59 => "Neubindung nach", 61 => "Client-ID", 66 => "Bootserver", 67 => "Bootdatei", _ => $"Option {code}"
+        1 => Localizer.Text("Subnetzmaske"), 3 => "Gateway", 6 => "DNS", 12 => "Hostname", 15 => Localizer.Text("Domäne"), 50 => Localizer.Text("gewünschte IP"),
+        51 => Localizer.Text("Lease-Dauer"), 54 => "DHCP-Server", 55 => Localizer.Text("angefragte Optionen"), 57 => Localizer.Text("max. Nachrichtengröße"),
+        58 => Localizer.Text("Erneuerung nach"), 59 => Localizer.Text("Neubindung nach"), 61 => Localizer.Text("Client-ID"), 66 => "Bootserver", 67 => Localizer.Text("Bootdatei"), _ => $"Option {code}"
     };
     private static string Value(byte code, byte[] bytes)
     {
