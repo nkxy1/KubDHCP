@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="assets/KubDHCP.png" alt="KubDHCP logo" width="200">
+</p>
+<p align="center">100% Vibecoded with Codex</p>
+
 # KubDHCP — User guide
 
 [Deutsch](docs/Manual.de.md) · [Latest release](https://github.com/nkxy1/KubDHCP/releases/latest)
