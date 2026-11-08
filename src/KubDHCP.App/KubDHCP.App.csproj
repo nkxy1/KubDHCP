@@ -31,12 +31,13 @@
     <SatelliteResourceLanguages>de;en</SatelliteResourceLanguages>
     <AppxPackage>false</AppxPackage>
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
-    <Version>1.0.17</Version>
+    <Version>1.0.18</Version>
     <Description>Portabler DHCPv4-Server zur Geräteinbetriebnahme</Description>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="ThirdPartyNotices.txt" />
     <EmbeddedResource Include="..\..\assets\KubDHCP.ico" LogicalName="KubDHCP.App.Icon.ico" />
+    <EmbeddedResource Include="..\..\assets\KubDHCP.png" LogicalName="KubDHCP.App.Icon.png" />
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.6.5" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools.MSIX" Version="1.7.251221100" />
     <ProjectReference Include="..\KubDHCP.Core\KubDHCP.Core.csproj" />

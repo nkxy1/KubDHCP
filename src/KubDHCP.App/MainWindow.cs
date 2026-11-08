@@ -11,6 +11,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Ellipse = Microsoft.UI.Xaml.Shapes.Ellipse;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Graphics;
 using Microsoft.UI.Windowing;
 using Windows.ApplicationModel.DataTransfer;
@@ -21,6 +22,9 @@ internal sealed partial class MainWindow : Window
 {
     private readonly Grid root = new() { Padding = new Thickness(12, 9, 12, 6), RowSpacing = 9 };
     private readonly Grid layout = new();
+    private readonly Grid windowFrame = new();
+    private readonly Grid titleBarContent = new() { Height = 48, Padding = new Thickness(24, 0, 144, 0), ColumnSpacing = 14 };
+    private readonly Grid statusBar = new() { Padding = new Thickness(24, 10, 24, 10), ColumnSpacing = 16 };
     private readonly ColumnDefinition monitorColumn = new() { Width = new GridLength(0) };
     private readonly Border monitorPanel = new() { Visibility = Visibility.Collapsed };
     private readonly ToggleButton monitorButton = new() { Content = new FontIcon { Glyph = "\uE756", FontSize = 16 }, MinWidth = 40 };
@@ -114,7 +118,8 @@ internal sealed partial class MainWindow : Window
         var scroll = new ScrollViewer { Content = root, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         scroll.SizeChanged += (_, e) => root.MinHeight = Math.Max(0, e.NewSize.Height);
         layout.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) }); layout.ColumnDefinitions.Add(monitorDivider); layout.ColumnDefinitions.Add(monitorColumn);
-        layout.Children.Add(scroll); BuildMonitor(); Grid.SetColumn(monitorResize, 1); layout.Children.Add(monitorResize); Grid.SetColumn(monitorPanel, 2); layout.Children.Add(monitorPanel); Content = layout;
+        layout.Children.Add(scroll); BuildMonitor(); Grid.SetColumn(monitorResize, 1); layout.Children.Add(monitorResize); Grid.SetColumn(monitorPanel, 2); layout.Children.Add(monitorPanel);
+        BuildWindowFrame();
         monitorTimer = DispatcherQueue.CreateTimer(); monitorTimer.Interval = TimeSpan.FromMilliseconds(250); monitorTimer.Tick += (_, _) => DrainNetworkMessages(); monitorTimer.Start();
         monitorBlinkTimer = DispatcherQueue.CreateTimer(); monitorBlinkTimer.Interval = TimeSpan.FromMilliseconds(500);
         monitorBlinkTimer.Tick += (_, _) => monitorState.Opacity = monitorState.Opacity < 1 ? 1 : 0.25;
@@ -178,7 +183,7 @@ internal sealed partial class MainWindow : Window
     {
         foreach (var button in new ButtonBase[] { toggle, monitorButton, saveRange, removeRange, adapterSettings, refresh }) Ui.SizeIconButton(button);
         root.Background = Ui.Brush("ApplicationPageBackgroundThemeBrush");
-        foreach (var height in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) root.RowDefinitions.Add(new() { Height = height });
+        foreach (var height in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star) }) root.RowDefinitions.Add(new() { Height = height });
         root.Children.Add(message);
         var cardContent = new StackPanel { Spacing = 16 };
         var heading = new Grid { ColumnSpacing = 12 };
@@ -237,12 +242,46 @@ internal sealed partial class MainWindow : Window
         AutomationProperties.SetName(table, Localizer.Text("DHCP-Geräte: Zeitstempel, IP, MAC-Adresse, Client-ID, Hostname, Hersteller und Rest-Leasezeit"));
         var horizontal = new ScrollViewer { HorizontalScrollMode = ScrollMode.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollMode = ScrollMode.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Content = tableGrid };
         var tableBorder = new Border { BorderThickness = new Thickness(1), BorderBrush = Ui.Brush("CardStrokeColorDefaultBrush"), Background = Ui.Brush("CardBackgroundFillColorDefaultBrush"), CornerRadius = new CornerRadius(8), Child = horizontal }; Grid.SetRow(tableBorder, 1); leasesSection.Children.Add(tableBorder); Grid.SetRow(leasesSection, 2); root.Children.Add(leasesSection);
-        var bottom = new Grid { ColumnSpacing = 16 };
-        bottom.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) }); bottom.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        footer.TextWrapping = TextWrapping.Wrap; bottom.Children.Add(footer);
+    }
+    private void BuildWindowFrame()
+    {
+        windowFrame.Background = Ui.Brush("ApplicationPageBackgroundThemeBrush");
+        foreach (var height in new[] { GridLength.Auto, new GridLength(1), new GridLength(1, GridUnitType.Star), new GridLength(1), GridLength.Auto })
+            windowFrame.RowDefinitions.Add(new() { Height = height });
+        titleBarContent.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        titleBarContent.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        titleBarContent.ColumnDefinitions.Add(new() { Width = new GridLength(1, GridUnitType.Star) });
+        var image = new Image { Width = 28, Height = 28, VerticalAlignment = VerticalAlignment.Center };
+        using (var stream = typeof(MainWindow).Assembly.GetManifestResourceStream("KubDHCP.App.Icon.png"))
+        {
+            if (stream is not null)
+            {
+                var bitmap = new BitmapImage(); bitmap.SetSource(stream.AsRandomAccessStream()); image.Source = bitmap;
+            }
+        }
+        titleBarContent.Children.Add(image);
+        var name = Ui.Text(Title, 16); name.FontWeight = FontWeights.SemiBold; name.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(name, 1); titleBarContent.Children.Add(name);
+        var subtitle = Ui.Text("DHCP Server", 13); subtitle.Foreground = Ui.Brush("TextFillColorSecondaryBrush"); subtitle.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(subtitle, 2); titleBarContent.Children.Add(subtitle);
+        windowFrame.Children.Add(titleBarContent);
+        foreach (var row in new[] { 1, 3 })
+        {
+            var divider = new Border { Background = Ui.Brush("DividerStrokeColorDefaultBrush") };
+            Grid.SetRow(divider, row); windowFrame.Children.Add(divider);
+        }
+        Grid.SetRow(layout, 2); windowFrame.Children.Add(layout);
+        statusBar.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) }); statusBar.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        footer.TextTrimming = TextTrimming.CharacterEllipsis; footer.VerticalAlignment = VerticalAlignment.Center;
+        footer.Foreground = Ui.Brush("TextFillColorSecondaryBrush"); statusBar.Children.Add(footer);
         var version = typeof(MainWindow).Assembly.GetName().Version!;
-        var versionLabel = Ui.Text($"v{version.Major}.{version.Minor}.{version.Build}", 12); versionLabel.HorizontalAlignment = HorizontalAlignment.Right; versionLabel.VerticalAlignment = VerticalAlignment.Bottom;
-        Grid.SetColumn(versionLabel, 1); bottom.Children.Add(versionLabel); Grid.SetRow(bottom, 3); root.Children.Add(bottom);
+        var versionLabel = Ui.Text($"v{version.Major}.{version.Minor}.{version.Build}", 12); versionLabel.HorizontalAlignment = HorizontalAlignment.Right; versionLabel.VerticalAlignment = VerticalAlignment.Center;
+        versionLabel.Foreground = Ui.Brush("TextFillColorSecondaryBrush");
+        Grid.SetColumn(versionLabel, 1); statusBar.Children.Add(versionLabel); Grid.SetRow(statusBar, 4); windowFrame.Children.Add(statusBar);
+        Content = windowFrame;
+        ExtendsContentIntoTitleBar = true;
+        AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+        SetTitleBar(titleBarContent);
     }
     private void UpdateTitleBarTheme()
     {
@@ -256,7 +295,7 @@ internal sealed partial class MainWindow : Window
             titleBar.BackgroundColor = titleBar.InactiveBackgroundColor = background;
             titleBar.ForegroundColor = titleBar.ButtonForegroundColor = foreground;
             titleBar.InactiveForegroundColor = titleBar.ButtonInactiveForegroundColor = inactive;
-            titleBar.ButtonBackgroundColor = titleBar.ButtonInactiveBackgroundColor = background;
+            titleBar.ButtonBackgroundColor = titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
             titleBar.ButtonHoverBackgroundColor = dark ? Windows.UI.Color.FromArgb(255, 55, 55, 55) : Windows.UI.Color.FromArgb(255, 225, 225, 225);
             titleBar.ButtonHoverForegroundColor = titleBar.ButtonPressedForegroundColor = foreground;
             titleBar.ButtonPressedBackgroundColor = dark ? Windows.UI.Color.FromArgb(255, 70, 70, 70) : Windows.UI.Color.FromArgb(255, 210, 210, 210);
@@ -466,6 +505,7 @@ internal sealed partial class MainWindow : Window
     }
     internal async Task VerifyMonitorStartupAsync(string reportPath)
     {
+        VerifyWindowFrame();
         if (monitorPanel.Visibility != Visibility.Collapsed || monitorColumn.Width.Value != 0)
             throw new InvalidOperationException("Monitor ist beim Start nicht vollständig ausgeblendet.");
         if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized })
@@ -479,6 +519,7 @@ internal sealed partial class MainWindow : Window
             if (!messages.Contains(type, StringComparison.Ordinal)) throw new InvalidOperationException(type + " fehlt im Live-Monitor.");
         if (monitorPanel.Visibility != Visibility.Visible) throw new InvalidOperationException("Monitor wurde nicht eingeblendet.");
         await Task.Delay(100);
+        VerifyWindowFrame();
         var widthBefore = monitorWidth; ResizeMonitor(-60);
         if (monitorWidth <= widthBefore) throw new InvalidOperationException("Monitorbreite lässt sich nicht vergrößern.");
         for (var i = 0; i < 120; i++) QueueNetworkMessage($"LOOPBACK-TEST · Scrollprüfung {i:D3} · Monitor-Ausgabe zum Nachlesen.");
@@ -518,6 +559,18 @@ internal sealed partial class MainWindow : Window
             throw new InvalidOperationException("Fensterposition oder Höhe springt beim Ausblenden des Monitors.");
         if (monitorPanel.Visibility != Visibility.Collapsed || monitorColumn.Width.Value != 0 || monitorDivider.Width.Value != 0 || layout.ColumnSpacing != 0)
             throw new InvalidOperationException("Monitor wurde nicht vollständig ausgeblendet.");
+    }
+    private void VerifyWindowFrame()
+    {
+        windowFrame.UpdateLayout();
+        var statusPosition = statusBar.TransformToVisual(windowFrame).TransformPoint(new Windows.Foundation.Point());
+        var versionLabel = (TextBlock)statusBar.Children[1];
+        var versionPosition = versionLabel.TransformToVisual(windowFrame).TransformPoint(new Windows.Foundation.Point());
+        if (!ExtendsContentIntoTitleBar || titleBarContent.ActualHeight != 48
+            || Math.Abs(statusBar.ActualWidth - windowFrame.ActualWidth) > 1
+            || Math.Abs(statusPosition.Y + statusBar.ActualHeight - windowFrame.ActualHeight) > 1
+            || Math.Abs(versionPosition.X + versionLabel.ActualWidth + statusBar.Padding.Right - windowFrame.ActualWidth) > 1)
+            throw new InvalidOperationException("Titelleiste oder feste Statusleiste mit Version unten rechts ist falsch angeordnet.");
     }
     private void OpenAdapterSettings()
     {
