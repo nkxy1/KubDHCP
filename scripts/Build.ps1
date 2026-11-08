@@ -1,6 +1,16 @@
 param([switch]$SkipTests)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
+# The Windows SDK manifest tool cannot handle UNC project paths. Reuse an
+# existing drive mapping when this script is invoked from a network checkout.
+if ($projectRoot.StartsWith('\\')) {
+    foreach ($drive in Get-PSDrive -PSProvider FileSystem) {
+        if ($drive.DisplayRoot -and $projectRoot.StartsWith($drive.DisplayRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+            $projectRoot = Join-Path $drive.Root $projectRoot.Substring($drive.DisplayRoot.Length + 1)
+            break
+        }
+    }
+}
 Set-Location -LiteralPath $projectRoot
 $localDotnet = Join-Path $projectRoot '.tools\dotnet\dotnet.exe'
 $dotnetCommand = if (Test-Path -LiteralPath $localDotnet) { $localDotnet } else { (Get-Command dotnet -ErrorAction Stop).Source }
@@ -10,8 +20,12 @@ if (-not $SkipTests) {
         if ($LASTEXITCODE -ne 0) { throw "Die Kerntests ($language) sind fehlgeschlagen." }
     }
 }
-& $dotnetCommand publish 'src\KubDHCP.App\KubDHCP.App.csproj' -c Release -o 'artifacts\portable' --nologo
+$runtimeDirectory = Join-Path $projectRoot ('artifacts\runtime-' + [Guid]::NewGuid().ToString('N'))
+& $dotnetCommand publish 'src\KubDHCP.App\KubDHCP.App.csproj' -c Release -o $runtimeDirectory --nologo
 if ($LASTEXITCODE -ne 0) { throw 'Veröffentlichung fehlgeschlagen.' }
+$portableDirectory = Join-Path $projectRoot 'artifacts\portable'
+New-Item -ItemType Directory -Path $portableDirectory -Force | Out-Null
+& (Join-Path $PSScriptRoot 'Build-Launcher.ps1') -RuntimeDirectory $runtimeDirectory -OutputPath (Join-Path $portableDirectory 'KubDHCP.exe')
 $distribution = Join-Path $projectRoot 'dist'
 New-Item -ItemType Directory -Path $distribution -Force | Out-Null
 $exePath = Join-Path $distribution 'KubDHCP.exe'
@@ -25,6 +39,7 @@ catch [IO.IOException] {
     Write-Output "Die laufende EXE bleibt erhalten. Neue Version: $exePath"
 }
 $exe = Get-Item -LiteralPath $exePath
+& (Join-Path $PSScriptRoot 'Test-Launcher.ps1') -ExePath $exe.FullName
 $report = Join-Path $projectRoot 'artifacts\transport-test.txt'
 $testStartInfo = [Diagnostics.ProcessStartInfo]::new($exe.FullName)
 $testStartInfo.UseShellExecute = $false
@@ -66,7 +81,7 @@ if ($tuiProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $tuiReport)) { t
 $tuiResult = Get-Content -LiteralPath $tuiReport -Raw
 if (-not $tuiResult.StartsWith('PASS:')) { throw $tuiResult }
 Write-Output $tuiResult
-& (Join-Path $PSScriptRoot 'Test-TuiSession.ps1') -ExePath $smokeExe -Language $language
+& (Join-Path $PSScriptRoot 'Test-TuiSession.ps1') -ExePath $smokeExe -Language $language -ColdStart
 }
 Write-Output "Portable EXE: $($exe.FullName) ($([Math]::Round($exe.Length / 1MB, 2)) MiB)"
 Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256 | Format-List

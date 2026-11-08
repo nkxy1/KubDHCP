@@ -360,6 +360,22 @@ Test("Existing user data takes priority over legacy executable-side data", () =>
     var legacy = new DataStore(Path.Combine(executable, "KubDHCP.data")); legacy.SaveRange("Legacy", config);
     Check(UserData.Open(profile, executable).LoadRanges().Single().Name == "User");
 });
+Test("Native launcher preserves legacy migration beside the portable executable", () =>
+{
+    var root = Store().DirectoryPath;
+    var executable = Path.Combine(root, "portable", "KubDHCP.exe");
+    var legacy = new DataStore(Path.Combine(Path.GetDirectoryName(executable)!, "KubDHCP.data"));
+    legacy.SaveRange("Launcher legacy", config);
+    var previous = Environment.GetEnvironmentVariable("KUBDHCP_LAUNCHER_PATH");
+    try
+    {
+        Environment.SetEnvironmentVariable("KUBDHCP_LAUNCHER_PATH", executable);
+        var user = UserData.Open(Path.Combine(root, "profile"));
+        Check(user.LoadRanges().Single().Name == "Launcher legacy");
+        Check(legacy.LoadRanges().Single().Name == "Launcher legacy");
+    }
+    finally { Environment.SetEnvironmentVariable("KUBDHCP_LAUNCHER_PATH", previous); }
+});
 Test("Legacy corrupt leases remain corrupt after migration and still block server startup", () =>
 {
     var root = Store().DirectoryPath; var executable = Path.Combine(root, "application");

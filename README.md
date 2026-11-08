@@ -11,7 +11,7 @@ KubDHCP is a portable DHCPv4 server for commissioning directly connected devices
 
 ## Download, launch and language
 
-Download **KubDHCP.exe** from the release assets. Keep that filename; put versions in the containing folder, such as `v1.0.16/KubDHCP.exe`. No separate .NET runtime, Windows App Runtime or service installation is needed. The bundled runtime extracts into its normal cache on first launch.
+Download **KubDHCP.exe** from the release assets. Keep that filename; put versions in the containing folder, such as `v1.0.19/KubDHCP.exe`. No separate .NET runtime, Windows App Runtime or service installation is needed. On first launch, a native starter displays extraction progress and caches the bundled application under `%LOCALAPPDATA%\KubDHCP.Runtime`. Later launches reuse the cache without showing the extraction window. With `--tui`, extraction progress appears in the calling terminal.
 
 Double-click the EXE for WinUI. For the terminal interface, run:
 
@@ -172,6 +172,6 @@ Use Windows x64, PowerShell 7 and .NET SDK 10.0.403 or its configured compatible
 .\scripts\Build.ps1
 ```
 
-The script uses `.tools/dotnet/dotnet.exe` if present, otherwise the installed SDK. It runs core tests, publishes `dist/KubDHCP.exe`, tests native loopback transport, the real WinUI window, the published TUI and direct PowerShell/ConPTY operation in **German and English**. It starts no DHCP server on the production LAN. Microsoft Windows SDK/WinRT assemblies may emit generic IL2104 trimming warnings.
+The script uses `.tools/dotnet/dotnet.exe` if present, otherwise the installed SDK. It downloads the pinned Zig 0.13.0 compiler with SHA256 verification into `%LOCALAPPDATA%\KubDHCP.BuildTools` for the native starter. It runs core tests, publishes `dist/KubDHCP.exe`, checks cold extraction, warm cache reuse, incomplete-cache repair, concurrent starts and corrupt-package rejection, and tests native loopback transport, the real WinUI window, the published TUI and direct PowerShell/ConPTY operation in **German and English**. The terminal-session test uses a fresh extraction cache. It starts no DHCP server on the production LAN. Microsoft Windows SDK/WinRT assemblies may emit generic IL2104 trimming warnings.
 
 Use `scripts/Bump-Version.ps1` once per requested change iteration. After patch 100, the minor version advances and patch resets to zero. The app project is the single version source for both interfaces and the EXE. Third-party notices and offline data sources are included in the source. Real hardware DHCP and actual remote SSH connections require separate environment-specific verification.

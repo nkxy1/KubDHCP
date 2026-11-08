@@ -9,7 +9,8 @@ public static class UserData
     {
         var destination = profileRoot is null ? DirectoryPath : Path.Combine(Path.GetFullPath(profileRoot), "KubDHCP");
         if (Directory.Exists(destination)) return new DataStore(destination);
-        var legacy = Path.Combine(executableDirectory ?? Path.GetDirectoryName(Environment.ProcessPath!)!, "KubDHCP.data");
+        var launcher = Environment.GetEnvironmentVariable("KUBDHCP_LAUNCHER_PATH");
+        var legacy = Path.Combine(executableDirectory ?? Path.GetDirectoryName(launcher ?? Environment.ProcessPath!)!, "KubDHCP.data");
         if (!Directory.Exists(legacy)) return new DataStore(destination);
 
         // Stage the complete legacy state before exposing the new directory. Never

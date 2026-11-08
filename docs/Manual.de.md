@@ -6,7 +6,7 @@ KubDHCP ist ein portabler DHCPv4-Server zur Inbetriebnahme direkt angeschlossene
 
 ## Herunterladen, starten und Sprache
 
-Die **KubDHCP.exe** aus den Release-Anhängen herunterladen. Diesen Dateinamen beibehalten; Versionsnummern gehören in den übergeordneten Ordner, beispielsweise `v1.0.16/KubDHCP.exe`. Eine separate Installation von .NET, Windows App Runtime oder eines Dienstes ist nicht erforderlich. Beim ersten Start entpackt die Einzeldateibereitstellung ihre Laufzeitdateien in den üblichen Cache.
+Die **KubDHCP.exe** aus den Release-Anhängen herunterladen. Diesen Dateinamen beibehalten; Versionsnummern gehören in den übergeordneten Ordner, beispielsweise `v1.0.19/KubDHCP.exe`. Eine separate Installation von .NET, Windows App Runtime oder eines Dienstes ist nicht erforderlich. Beim ersten Start zeigt ein nativer Starter den Entpackfortschritt und legt die Programmdateien unter `%LOCALAPPDATA%\KubDHCP.Runtime` ab. Weitere Starts verwenden diesen Cache ohne Entpackfenster. Bei `--tui` erscheint der Fortschritt ausschließlich im aufrufenden Terminal.
 
 Ein Doppelklick startet WinUI. Die Terminaloberfläche wird aus einer interaktiven PowerShell gestartet:
 

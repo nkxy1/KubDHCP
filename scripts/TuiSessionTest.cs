@@ -17,7 +17,7 @@ public static class KubTuiSessionTest
     [StructLayout(LayoutKind.Sequential)] struct StartupEx { public Startup Startup; public IntPtr Attributes; }
     [StructLayout(LayoutKind.Sequential)] struct ProcessInfo { public IntPtr Process,Thread; public uint Id,ThreadId; }
     static void Check(bool result) { if(!result) throw new Win32Exception(Marshal.GetLastWin32Error()); }
-    public static void Run(string powershell, string exe, string language)
+    public static void Run(string powershell, string exe, string language, bool coldStart = false)
     {
         IntPtr inRead=IntPtr.Zero,inWrite=IntPtr.Zero,outRead=IntPtr.Zero,outWrite=IntPtr.Zero,pty=IntPtr.Zero,list=IntPtr.Zero;
         ProcessInfo process=new ProcessInfo(); var captured=new StringBuilder(); object sync=new object(); Thread reader=null;
@@ -51,6 +51,8 @@ public static class KubTuiSessionTest
             }
             void Send(string text) {var data=Encoding.UTF8.GetBytes(text); Check(WriteFile(inWrite,data,(uint)data.Length,out _,IntPtr.Zero));}
             Until(s=>s.Contains(language == "de" ? "DHCP-Konfiguration" : "DHCP configuration"),"TUI did not render inside PowerShell/ConPTY");
+            if(coldStart && !Output().Contains(language == "de" ? "KubDHCP wird entpackt:" : "Extracting KubDHCP:"))
+                throw new InvalidOperationException("Cold-start extraction progress is missing from the calling terminal");
             Thread.Sleep(400);
             if(File.Exists(marker)) throw new InvalidOperationException("PowerShell returned before TUI exit");
             // Real SGR mouse click/release on the Monitor button at columns 133..137.

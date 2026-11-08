@@ -6,7 +6,7 @@ KubDHCP is a portable DHCPv4 server for commissioning directly connected devices
 
 ## Download, launch and language
 
-Download **KubDHCP.exe** from the release assets. Keep that filename; put versions in the containing folder, such as `v1.0.16/KubDHCP.exe`. No separate .NET runtime, Windows App Runtime or service installation is needed. The bundled runtime extracts into its normal cache on first launch.
+Download **KubDHCP.exe** from the release assets. Keep that filename; put versions in the containing folder, such as `v1.0.19/KubDHCP.exe`. No separate .NET runtime, Windows App Runtime or service installation is needed. On first launch, a native starter shows extraction progress and caches the application under `%LOCALAPPDATA%\KubDHCP.Runtime`. Later launches reuse the cache without showing the extraction window. With `--tui`, progress appears in the calling terminal.
 
 Double-click the EXE for WinUI. For the terminal interface, run:
 
